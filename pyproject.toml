@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dift-cli"
-version = "0.2.1"
+version = "0.3.0"
 description = "Git diff for datasets: compare datasets and understand what changed."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,7 +26,11 @@ keywords = [
   "data-engineering",
   "data-diff",
   "data-validation",
-  "dataset-comparison"
+  "dataset-comparison",
+  "excel-report",
+  "html-report",
+  "data-observability",
+  "data-testing"
 ]
 
 classifiers = [
@@ -52,7 +56,8 @@ dependencies = [
   "typer>=0.12.0",
   "rich>=13.7.0",
   "pydantic>=2.7.0",
-  "fastexcel>=0.12.0"
+  "fastexcel>=0.12.0",      # Excel reading (Polars engine)
+  "openpyxl>=3.1.2,<4.0"    # Excel writing (reports)
 ]
 
 [project.optional-dependencies]
