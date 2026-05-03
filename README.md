@@ -6,29 +6,24 @@
 
 Dift is an open-source CLI tool that helps data professionals compare two datasets and instantly understand:
 
-- what changed  
-- why it matters  
-- whether the new data is safe to trust  
+* what changed
+* why it matters
+* whether the new data is safe to trust
 
 ---
 
-## What's New in v0.2.1
+## What's New in v0.3.0
 
-Dift v0.2.1 introduces a more polished CLI experience and broader file support.
+Dift v0.3.0 introduces powerful reporting and export capabilities, making it easier to analyze and share dataset changes.
 
-### New Improvements
+### New Features
 
-- Better console formatting
-- Rich terminal colors
-- Cleaner summary tables
-- Risk level highlighting
-- Percentage row change display
-- Better missing file error messages
-- JSON dataset support
-- JSON example datasets
-- Excel example datasets
-- Parquet example datasets
-- Improved installation instructions
+* HTML report export
+* CSV summary export
+* Excel report export
+* Improved JSON report structure
+* Report templates (HTML)
+* `--output-dir` support for directory-based exports
 
 ---
 
@@ -36,52 +31,94 @@ Dift v0.2.1 introduces a more polished CLI experience and broader file support.
 
 Bad data breaks:
 
-- dashboards  
-- reports  
-- ETL pipelines  
-- analytics workflows  
-- ML models  
-- business decisions  
+* dashboards
+* reports
+* ETL pipelines
+* analytics workflows
+* ML models
+* business decisions
 
 Dift helps teams catch risky data changes **before they cause damage**.
 
 ---
 
-## Features (v0.2.1)
+## Features (v0.3.0)
 
 Compare two datasets in seconds.
 
 ### Supported Formats
 
-- CSV
-- Parquet
-- Excel (`.xlsx`, `.xls`)
-- JSON
+* CSV
+* Parquet
+* Excel (`.xlsx`, `.xls`)
+* JSON
+
+---
 
 ### Detect Changes
 
-- Schema diff
-- Row count diff
-- Added rows
-- Removed rows
-- Changed rows (with key column)
-- Column type changes
-- Null spikes
-- Duplicate increases
-- Numeric stats diff
-- Categorical value changes
-- Risk scoring (`low`, `medium`, `high`)
+* Schema diff
+* Row count diff
+* Added rows
+* Removed rows
+* Changed rows (with key column)
+* Column type changes
+* Null spikes
+* Duplicate increases
+* Numeric stats diff
+* Categorical value changes
+* Risk scoring (`low`, `medium`, `high`)
 
-### Output
+---
 
-- Rich CLI report
-- JSON report export
+### Output Options
+
+* Rich CLI report
+* JSON report
+* CSV summary
+* Excel report
+* HTML report
+
+---
+
+### HTML Templates
+
+Customize your HTML reports:
+
+```bash
+dift old.csv new.csv --report html --template clean
+```
+
+Available templates:
+
+* `default`
+* `clean`
+* `compact`
+* `enterprise`
+* `dark`
+
+---
+
+### Output Directory Support
+
+Save reports to a directory without specifying filenames:
+
+```bash
+dift old.csv new.csv --report json --output-dir reports/
+```
+
+Auto-generated filenames:
+
+* `dift_report.json`
+* `dift_report.csv`
+* `dift_report.xlsx`
+* `dift_report.html`
 
 ---
 
 ## Requirements
 
-- Python 3.10+
+* Python 3.10+
 
 ---
 
@@ -89,7 +126,7 @@ Compare two datasets in seconds.
 
 ```bash
 pip install dift-cli
-````
+```
 
 Then run:
 
@@ -97,8 +134,11 @@ Then run:
 dift --help
 ```
 
-## Quick Update (Latest version: 0.2.1)
-```
+---
+
+## Quick Update (Latest version: 0.3.0)
+
+```bash
 pip install --upgrade dift-cli
 ```
 
@@ -130,17 +170,10 @@ source .venv/bin/activate
 pip install dift-cli
 ```
 
-### pipx (Recommended for CLI Tools)
+### pipx (Recommended)
 
 ```bash
 pipx install dift-cli
-```
-
-If `pipx` is not installed:
-
-```bash
-python -m pip install pipx
-python -m pipx ensurepath
 ```
 
 ---
@@ -159,18 +192,6 @@ python -m dift.cli --help
 
 ---
 
-## If Command Not Found
-
-Use:
-
-```bash
-python -m dift.cli --help
-```
-
-Or restart your terminal.
-
----
-
 ## Quick Start
 
 ### Compare CSV Files
@@ -178,48 +199,41 @@ Or restart your terminal.
 ```bash
 dift examples/old.csv examples/new.csv --key customer_id
 ```
-```bash
-dift examples/old3.csv examples/new3.csv --key emp_id
-```
 
-### Compare Parquet Files
+---
 
-```bash
-dift examples/old.parquet examples/new.parquet --key customer_id
-```
+### Generate Reports
 
-### Compare Excel Files
-
-```bash
-dift examples/old.xlsx examples/new.xlsx --key customer_id
-```
-
-### Compare JSON Files
-
-```bash
-dift examples/old.json examples/new.json --key customer_id
-```
-
-### Generate JSON Report
+#### JSON
 
 ```bash
 dift examples/old.csv examples/new.csv --key customer_id --report json --output report.json
 ```
-### Generate CSV Report
+
+#### CSV
 
 ```bash
 dift examples/old.csv examples/new.csv --key customer_id --report csv --output report.csv
 ```
-### Generate Excel Report
+
+#### Excel
 
 ```bash
 dift examples/old.csv examples/new.csv --key customer_id --report excel --output report.xlsx
 ```
-### Generate HTML Report
+
+#### HTML
 
 ```bash
 dift examples/old.csv examples/new.csv --key customer_id --report html --output report.html
 ```
+
+#### HTML with Template
+
+```bash
+dift examples/old.csv examples/new.csv --key customer_id --report html --template dark --output report.html
+```
+
 ---
 
 ## Example Output
@@ -242,7 +256,7 @@ Nulls increased in revenue by 9.09%
 
 ---
 
-## Example Files Included
+## Example Files
 
 ```text
 examples/
@@ -253,24 +267,12 @@ examples/
 ├── old.xlsx
 ├── new.xlsx
 ├── old.json
-|── new.json
-├── old.csv
-├── new.csv
-├── old.parquet
-├── new.parquet
-├── old.xlsx
-├── new.xlsx
-├── old.json
 └── new.json
 ```
-More examples also available.
-Check examples folder and use them to test instantly.
-
-But familiar with the examples columns and remember to use it's primary key column for the --key input.
 
 ---
 
-## Example Use Cases
+## Use Cases
 
 ### ETL Validation
 
@@ -278,34 +280,16 @@ But familiar with the examples columns and remember to use it's primary key colu
 dift before.csv after.csv
 ```
 
-### Daily Snapshot Checks
+### ML Dataset Drift
 
 ```bash
-dift yesterday.parquet today.parquet
-```
-
-### Excel File Audits
-
-```bash
-dift old.xlsx new.xlsx --key id
-```
-
-### JSON API Export Checks
-
-```bash
-dift old.json new.json --key id
+dift train_v1.csv train_v2.csv
 ```
 
 ### Production vs Staging
 
 ```bash
 dift prod.csv staging.csv --key id
-```
-
-### ML Dataset Drift Checks
-
-```bash
-dift train_v1.csv train_v2.csv
 ```
 
 ---
@@ -316,20 +300,13 @@ dift train_v1.csv train_v2.csv
 dift/
 ├── cli.py
 ├── core/
-│   ├── comparator.py
-│   ├── schema_diff.py
-│   ├── row_diff.py
-│   ├── quality_diff.py
-│   ├── risk.py
-│   └── stats_diff.py
 ├── io/
-│   └── readers.py
 ├── reports/
 │   ├── console_report.py
 │   ├── json_report.py
-|   ├── csv_report.py
-|   ├── excel_report.py
-|   ├── html_report.py
+│   ├── csv_report.py
+│   ├── excel_report.py
+│   ├── html_report.py
 │   └── models.py
 └── utils/
 
@@ -345,7 +322,7 @@ examples/
 pytest
 ```
 
-Lint code:
+Lint:
 
 ```bash
 ruff check .
@@ -355,22 +332,14 @@ ruff check .
 
 ## Roadmap
 
-## v0.3.0
+### v0.4.0
 
-* HTML report export
-* CSV summary export
-* Excel report export
-* Better JSON report structure
-* Report templates
-* `--output-dir`
-
-## v0.4.0
-
-* Improve null spike detection
+* Improve null detection
 * Improve duplicate detection
 
-## v0.5.0
+### v0.5.0
 
+* Drift thresholds
 * Outlier detection
 * Numeric drift thresholds
 * Categorical shift warnings
@@ -381,39 +350,13 @@ ruff check .
 * SQL database support
 * Postgres connector
 
-## v0.7.0
-
-* Snowflake connector
-* BigQuery connector
-
-## v0.8.0
-
-* CI/CD fail checks
-* dbt integration
-
-## v0.9.0
-
-* Drift alerts
-* Python API
-* Plugin system
-
-## v1.0.0
-
-* Stable CLI
-* Stable Python API
-* Full test coverage
-* Full docs site
-* Benchmarks
-* Security review
-* Production-ready install
-
 ---
 
 ## Contributing
 
 Contributions are welcome.
 
-Please read:
+See:
 
 ```text
 CONTRIBUTING.md
@@ -427,7 +370,6 @@ Ways to help:
 * Improve performance
 * Add connectors
 * Improve CLI UX
-
 ---
 
 ## License
@@ -441,3 +383,5 @@ MIT License
 Dift aims to become the standard open-source tool for dataset comparison and trust checks.
 
 **If Git has `git diff`, data teams should have `dift`.**
+
+
