@@ -8,10 +8,10 @@ from rich.console import Console
 
 from dift.core.comparator import compare_datasets
 from dift.reports.console_report import render_console
-from dift.reports.json_report import render_json
 from dift.reports.csv_report import render_csv
 from dift.reports.excel_report import render_excel
 from dift.reports.html_report import render_html
+from dift.reports.json_report import render_json
 
 app = typer.Typer(
     no_args_is_help=True,
