@@ -20,7 +20,12 @@ NUMERIC_DTYPES = {
 CATEGORICAL_DTYPES = {pl.String, pl.Categorical, pl.Enum, pl.Boolean}
 
 
-def compare_stats(old: pl.DataFrame, new: pl.DataFrame, top_n: int = 10, threshold: float = 0.1 ) -> StatsDiff:
+def compare_stats(
+    old: pl.DataFrame,
+    new: pl.DataFrame,
+    top_n: int = 10,
+    threshold: float = 0.1,
+) -> StatsDiff:
     """Compare numeric summary stats and categorical top values."""
     shared_cols = sorted(set(old.columns) & set(new.columns))
     numeric_diffs: list[NumericDiff] = []
@@ -34,19 +39,41 @@ def compare_stats(old: pl.DataFrame, new: pl.DataFrame, top_n: int = 10, thresho
             old_series = old[column]
             new_series = new[column]
 
-            o_min, n_min = _safe_float(old_series.min()), _safe_float(new_series.min())
-            o_max, n_max = _safe_float(old_series.max()), _safe_float(new_series.max())
-            o_mean, n_mean = _safe_float(old_series.mean()), _safe_float(new_series.mean())
-            o_std, n_std = _safe_float(old_series.std()), _safe_float(new_series.std())
+            o_min = _safe_float(old_series.min())
+            n_min = _safe_float(new_series.min())
+            o_max = _safe_float(old_series.max())
+            n_max = _safe_float(new_series.max())
+            o_mean = _safe_float(old_series.mean())
+            n_mean = _safe_float(new_series.mean())
+            o_std = _safe_float(old_series.std())
+            n_std = _safe_float(new_series.std())
 
-            mean_delta = abs(n_mean - o_mean) if n_mean is not None and o_mean is not None else 0            
-            std_delta = abs(n_std - o_std) if n_std is not None and o_std is not None else 0
-            
-            o_range = o_max - o_min if o_max is not None and o_min is not None else 0
-            n_range = n_max - n_min if n_max is not None and n_min is not None else 0
-            range_delta = abs(n_range - o_range)
+            o_range = (
+                o_max - o_min
+                if o_max is not None and o_min is not None
+                else None
+            )
+            n_range = (
+                n_max - n_min
+                if n_max is not None and n_min is not None
+                else None
+            )
 
-            is_drifted = (mean_delta > threshold) or (std_delta > threshold) or (range_delta > threshold)
+            mean_shift_pct = _relative_change(n_mean, o_mean)
+            std_shift_pct = _relative_change(n_std, o_std)
+            range_shift_pct = _relative_change(n_range, o_range)
+
+            is_drifted = any(
+                shift is not None and shift >= threshold
+                for shift in [mean_shift_pct, std_shift_pct, range_shift_pct]
+            )
+
+            severity = _classify_numeric_drift(
+                mean_shift_pct=mean_shift_pct,
+                std_shift_pct=std_shift_pct,
+                range_shift_pct=range_shift_pct,
+                threshold=threshold,
+            )
 
             numeric_diffs.append(
                 NumericDiff(
@@ -62,8 +89,12 @@ def compare_stats(old: pl.DataFrame, new: pl.DataFrame, top_n: int = 10, thresho
                     new_std=n_std,
                     delta_std=_safe_delta(n_std, o_std),
                     delta_range=_safe_delta(n_range, o_range),
+                    mean_shift_pct=mean_shift_pct,
+                    std_shift_pct=std_shift_pct,
+                    range_shift_pct=range_shift_pct,
                     is_drifted=is_drifted,
-                    drift_threshold=threshold
+                    drift_threshold=threshold,
+                    severity=severity,
                 )
             )
 
@@ -72,6 +103,7 @@ def compare_stats(old: pl.DataFrame, new: pl.DataFrame, top_n: int = 10, thresho
             new_counts = _top_counts(new, column, top_n)
             old_values = set(old_counts)
             new_values = set(new_counts)
+
             categorical_diffs.append(
                 CategoricalDiff(
                     column=column,
@@ -82,7 +114,10 @@ def compare_stats(old: pl.DataFrame, new: pl.DataFrame, top_n: int = 10, thresho
                 )
             )
 
-    return StatsDiff(numeric_diffs=numeric_diffs, categorical_diffs=categorical_diffs)
+    return StatsDiff(
+        numeric_diffs=numeric_diffs,
+        categorical_diffs=categorical_diffs,
+    )
 
 
 def _top_counts(df: pl.DataFrame, column: str, top_n: int) -> dict[object, int]:
@@ -102,7 +137,54 @@ def _safe_float(value: object) -> float | None:
     return float(value)
 
 
-def _safe_delta(new_value: float | None, old_value: float | None) -> float | None:
+def _relative_change(
+    new_value: float | None,
+    old_value: float | None,
+) -> float | None:
+    if new_value is None or old_value is None:
+        return None
+
+    baseline = abs(old_value)
+
+    if baseline == 0:
+        return abs(new_value) if new_value != 0 else 0.0
+
+    return abs(new_value - old_value) / baseline
+
+
+def _classify_numeric_drift(
+    mean_shift_pct: float | None,
+    std_shift_pct: float | None,
+    range_shift_pct: float | None,
+    threshold: float,
+) -> str:
+    shifts = [
+        shift
+        for shift in [mean_shift_pct, std_shift_pct, range_shift_pct]
+        if shift is not None
+    ]
+
+    if not shifts:
+        return "low"
+
+    max_shift = max(shifts)
+
+    if max_shift >= threshold * 5:
+        return "high"
+
+    if max_shift >= threshold * 2:
+        return "medium"
+
+    if max_shift >= threshold:
+        return "low"
+
+    return "low"
+
+
+def _safe_delta(
+    new_value: float | None,
+    old_value: float | None,
+) -> float | None:
     if new_value is None or old_value is None:
         return None
     return new_value - old_value

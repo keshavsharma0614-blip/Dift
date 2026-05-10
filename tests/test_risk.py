@@ -41,7 +41,7 @@ def make_report(**overrides):
     return report
 
 
-def test_numeric_drift_adds_risk_score():
+def test_medium_numeric_drift_adds_risk_score():
     report = make_report(
         numeric_diff=[
             NumericDiff(
@@ -50,11 +50,29 @@ def test_numeric_drift_adds_risk_score():
                 new_mean=160,
                 delta_mean=60,
                 is_drifted=True,
+                severity="medium",
             )
         ]
     )
 
-    assert calculate_risk_score(report) >= 15
+    assert calculate_risk_score(report) >= 20
+
+
+def test_high_numeric_drift_adds_risk_score():
+    report = make_report(
+        numeric_diff=[
+            NumericDiff(
+                column="revenue",
+                old_mean=100,
+                new_mean=1000,
+                delta_mean=900,
+                is_drifted=True,
+                severity="high",
+            )
+        ]
+    )
+
+    assert calculate_risk_score(report) >= 30
 
 
 def test_categorical_drift_adds_risk_score():

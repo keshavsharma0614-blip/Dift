@@ -81,10 +81,14 @@ class NumericDiff(BaseModel):
     delta_mean: float | None = None
     old_std: float | None = None
     new_std: float | None = None
-    delta_std: float | None = None   
-    delta_range: float | None = None 
+    delta_std: float | None = None
+    delta_range: float | None = None
+    mean_shift_pct: float | None = None
+    std_shift_pct: float | None = None
+    range_shift_pct: float | None = None
     drift_threshold: float | None = None
     is_drifted: bool = False
+    severity: str = "low"
 
 
 class CategoricalDiff(BaseModel):

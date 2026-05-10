@@ -88,33 +88,15 @@ def _stats_risk_score(report: DiffReport) -> int:
     score = 0
 
     for numeric_diff in report.numeric_diff:
-
         if not numeric_diff.is_drifted:
             continue
 
-        if numeric_diff.old_mean is not None and numeric_diff.delta_mean is not None:
-            baseline = abs(numeric_diff.old_mean) or 1
-            shift_pct = abs(numeric_diff.delta_mean) / baseline * 100
-            if shift_pct >= 50: 
-                score += 15
-            elif shift_pct >= 20: 
-                score += 10
-            elif shift_pct >= 10: 
-                score += 5
-        
-        if numeric_diff.old_std is not None and numeric_diff.delta_std is not None:
-            baseline = abs(numeric_diff.old_std) or 1
-            shift_pct = abs(numeric_diff.delta_std) / baseline * 100
-            if shift_pct >= 50: 
-                score += 10  
-            elif shift_pct >= 20: 
-                score += 5
-
-        old_range = (numeric_diff.old_max or 0) - (numeric_diff.old_min or 0)
-        if old_range > 0 and numeric_diff.delta_range is not None:
-            shift_pct = abs(numeric_diff.delta_range) / old_range * 100
-            if shift_pct >= 50: 
-                score += 5
+        if numeric_diff.severity == "high":
+            score += 30
+        elif numeric_diff.severity == "medium":
+            score += 20
+        else:
+            score += 10
 
     for categorical_diff in report.categorical_diff:
         added_count = len(categorical_diff.values_added)

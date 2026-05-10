@@ -12,18 +12,24 @@ Dift is an open-source CLI tool that helps data professionals compare two datase
 
 ---
 
-## What's New in v0.3.0
+## What's New in v0.4.0
 
-Dift v0.3.0 introduces powerful reporting and export capabilities, making it easier to analyze and share dataset changes.
+Dift v0.4.0 introduces major improvements to data quality validation, numeric drift detection, and weighted risk scoring.
 
 ### New Features
 
-* HTML report export
-* CSV summary export
-* Excel report export
+* Improved null spike detection
+* Improved duplicate spike detection
+* Weighted risk scoring system
+* Numeric drift detection
+* Configurable drift thresholds
+* Severity-based warnings
+* Better quality validation
 * Improved JSON report structure
-* Report templates (HTML)
-* `--output-dir` support for directory-based exports
+* HTML report templates
+* Excel report export
+* CSV summary export
+* `--output-dir` support
 
 ---
 
@@ -38,11 +44,11 @@ Bad data breaks:
 * ML models
 * business decisions
 
-Dift helps teams catch risky data changes **before they cause damage**.
+Dift helps teams catch risky data changes before they cause damage.
 
 ---
 
-## Features (v0.3.0)
+## Features (v0.4.0)
 
 Compare two datasets in seconds.
 
@@ -63,11 +69,29 @@ Compare two datasets in seconds.
 * Removed rows
 * Changed rows (with key column)
 * Column type changes
+
+### Data Quality Checks
+
 * Null spikes
-* Duplicate increases
-* Numeric stats diff (with configurable threshold)
+* Duplicate spikes
+* Duplicate percentage changes
+* Severity classification (`low`, `medium`, `high`)
+
+### Drift Detection
+
+* Numeric drift detection
+* Mean shift detection
+* Standard deviation drift
+* Range shift detection
+* Configurable drift threshold
 * Categorical value changes
-* Risk scoring (`low`, `medium`, `high`)
+* Frequency distribution changes
+
+### Risk Analysis
+
+* Weighted risk scoring
+* Risk classification (`low`, `medium`, `high`)
+* Multi-signal risk evaluation
 
 ---
 
@@ -87,7 +111,7 @@ Customize your HTML reports:
 
 ```bash
 dift old.csv new.csv --report html --template clean
-```
+````
 
 Available templates:
 
@@ -96,6 +120,31 @@ Available templates:
 * `compact`
 * `enterprise`
 * `dark`
+
+---
+
+### Numeric Drift Thresholds
+
+Control drift sensitivity using `--threshold`.
+
+Default threshold:
+
+```bash
+0.1
+```
+
+Example:
+
+```bash
+dift old.csv new.csv --threshold 0.2
+```
+
+This helps detect silent numeric drift in:
+
+* ML datasets
+* ETL pipelines
+* analytics tables
+* production data feeds
 
 ---
 
@@ -136,7 +185,7 @@ dift --help
 
 ---
 
-## Quick Update (Latest version: 0.3.0)
+## Quick Update (Latest version: 0.4.0)
 
 ```bash
 pip install --upgrade dift-cli
@@ -202,6 +251,14 @@ dift examples/old.csv examples/new.csv --key customer_id
 
 ---
 
+### Detect Numeric Drift
+
+```bash
+dift examples/old_drift.csv examples/new_drift.csv --key id --threshold 0.1
+```
+
+---
+
 ### Generate Reports
 
 #### JSON
@@ -241,17 +298,18 @@ dift examples/old.csv examples/new.csv --key customer_id --report html --templat
 ```text
 ╭─────────────────────────╮
 │ Dift Dataset Comparison │
-│ Risk Level: HIGH        │
+│ Risk Level: MEDIUM      │
 ╰─────────────────────────╯
 
 Summary
-Rows old: 10
-Rows new: 11
-Row delta: +1
-Row change %: +10.00%
+Rows old: 5
+Rows new: 5
+Row delta: 0
 
-Warnings:
-Nulls increased in revenue by 9.09%
+Warnings
+Null spike: 'revenue' increased by 80.00% (high)
+Duplicate spike: increased by 40.00% (high) using id
+Numeric drift detected in 'revenue'
 ```
 
 ---
@@ -267,7 +325,9 @@ examples/
 ├── old.xlsx
 ├── new.xlsx
 ├── old.json
-└── new.json
+├── new.json
+├── old_drift.csv
+└── new_drift.csv
 ```
 
 ---
@@ -292,6 +352,12 @@ dift train_v1.csv train_v2.csv
 dift prod.csv staging.csv --key id
 ```
 
+### Silent Data Drift Detection
+
+```bash
+dift train_v1.csv train_v2.csv --threshold 0.1
+```
+
 ---
 
 ## Project Structure
@@ -300,6 +366,11 @@ dift prod.csv staging.csv --key id
 dift/
 ├── cli.py
 ├── core/
+│   ├── schema_diff.py
+│   ├── row_diff.py
+│   ├── quality_diff.py
+│   ├── stats_diff.py
+│   └── risk.py
 ├── io/
 ├── reports/
 │   ├── console_report.py
@@ -334,16 +405,23 @@ ruff check .
 
 ### v0.4.0
 
-* Improve null detection
-* Improve duplicate detection
+* Improved null spike detection
+* Improved duplicate spike detection
+* Weighted risk scoring
+* Numeric drift detection
+* Threshold-based drift alerts
+* Better reporting
 
 ### v0.5.0
 
 * Outlier detection
-* Categorical shift warnings
-* Better risk scoring
+* Advanced categorical drift analysis
+* Frequency shift alerts
+* Trend analysis
+* Time-series comparison
+* Better visualization support
 
-## v0.6.0
+### v0.6.0
 
 * SQL database support
 * Postgres connector
@@ -368,6 +446,7 @@ Ways to help:
 * Improve performance
 * Add connectors
 * Improve CLI UX
+
 ---
 
 ## License
@@ -380,6 +459,4 @@ MIT License
 
 Dift aims to become the standard open-source tool for dataset comparison and trust checks.
 
-**If Git has `git diff`, data teams should have `dift`.**
-
-
+If Git has `git diff`, data teams should have `dift`.
