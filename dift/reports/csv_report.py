@@ -9,6 +9,13 @@ def render_csv(report: DiffReport, output: str | None = None) -> str:
     """Render and optionally write a CSV summary report."""
 
     null_spikes = sum(1 for diff in report.quality_diff.null_diffs if diff.is_spike)
+    outlier_spikes = sum(1 for diff in report.outlier_diff if diff.is_spike)
+    high_outlier_spikes = sum(
+        1
+        for diff in report.outlier_diff
+        if diff.is_spike and diff.severity == "high"
+    )
+    total_new_outliers = sum(diff.new_outliers for diff in report.outlier_diff)
 
     rows = [
         "metric,value",
@@ -34,6 +41,9 @@ def render_csv(report: DiffReport, output: str | None = None) -> str:
         f"duplicate_severity,{report.quality_diff.duplicate_diff.severity}",
         f"numeric_drift_columns,{len(report.numeric_diff)}",
         f"categorical_drift_columns,{len(report.categorical_diff)}",
+        f"outlier_spikes,{outlier_spikes}",
+        f"high_outlier_spikes,{high_outlier_spikes}",
+        f"total_new_outliers,{total_new_outliers}",
         f"risk_level,{report.summary.risk_level}",
     ]
 

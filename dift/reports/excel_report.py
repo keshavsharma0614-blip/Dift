@@ -25,6 +25,7 @@ def render_excel(report: DiffReport, output: str | None = None) -> Path:
 
     _add_summary_sheet(ws, report)
     _add_quality_sheet(wb, report)
+    _add_outlier_sheet(wb, report)
 
     wb.save(output_path)
     return output_path
@@ -94,7 +95,53 @@ def _add_quality_sheet(wb: Workbook, report: DiffReport) -> None:
             ["Severity", duplicate.severity],
         ]
     )
-    
+
+    for row in rows:
+        ws.append(row)
+
+    _style_header(ws)
+    _auto_size_columns(ws)
+    ws.freeze_panes = "A2"
+
+
+def _add_outlier_sheet(wb: Workbook, report: DiffReport) -> None:
+    ws = wb.create_sheet("Outlier Diff")
+
+    rows = [
+        [
+            "Column",
+            "Method",
+            "Old Outliers",
+            "New Outliers",
+            "Delta Outliers",
+            "Old Outlier %",
+            "New Outlier %",
+            "Delta Outlier %",
+            "Lower Bound",
+            "Upper Bound",
+            "Spike",
+            "Severity",
+        ]
+    ]
+
+    for item in report.outlier_diff:
+        rows.append(
+            [
+                item.column,
+                item.method,
+                item.old_outliers,
+                item.new_outliers,
+                item.delta_outliers,
+                item.old_outlier_pct,
+                item.new_outlier_pct,
+                item.delta_outlier_pct,
+                item.lower_bound,
+                item.upper_bound,
+                "Yes" if item.is_spike else "No",
+                item.severity,
+            ]
+        )
+
     for row in rows:
         ws.append(row)
 

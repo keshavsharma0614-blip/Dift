@@ -65,6 +65,7 @@ class DuplicateDiff(BaseModel):
     is_spike: bool = False
     severity: str = "low"
 
+
 class QualityDiff(BaseModel):
     null_diffs: list[NullDiff] = Field(default_factory=list)
     duplicate_diff: DuplicateDiff
@@ -91,6 +92,21 @@ class NumericDiff(BaseModel):
     severity: str = "low"
 
 
+class OutlierDiff(BaseModel):
+    column: str
+    method: str = "iqr"
+    old_outliers: int = 0
+    new_outliers: int = 0
+    delta_outliers: int = 0
+    old_outlier_pct: float = 0.0
+    new_outlier_pct: float = 0.0
+    delta_outlier_pct: float = 0.0
+    lower_bound: float | None = None
+    upper_bound: float | None = None
+    is_spike: bool = False
+    severity: str = "low"
+
+
 class CategoricalDiff(BaseModel):
     column: str
     values_added: list[str] = Field(default_factory=list)
@@ -102,6 +118,7 @@ class CategoricalDiff(BaseModel):
 class StatsDiff(BaseModel):
     numeric_diffs: list[NumericDiff] = Field(default_factory=list)
     categorical_diffs: list[CategoricalDiff] = Field(default_factory=list)
+    outlier_diffs: list[OutlierDiff] = Field(default_factory=list)
 
 
 class DiffReport(BaseModel):
@@ -119,3 +136,4 @@ class DiffReport(BaseModel):
         default_factory=list,
         alias="categorical",
     )
+    outlier_diff: list[OutlierDiff] = Field(default_factory=list, alias="outliers")

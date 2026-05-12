@@ -63,6 +63,7 @@ def _build_html(report: DiffReport, template: str) -> str:
     {_schema_section(report)}
     {_row_section(report)}
     {_quality_section(report)}
+    {_outlier_section(report)}
 
   </main>
 </body>
@@ -198,6 +199,52 @@ def _quality_section(report: DiffReport) -> str:
     </section>
     """
 
+def _outlier_section(report: DiffReport) -> str:
+    rows = ""
+
+    for item in report.outlier_diff:
+        rows += (
+            "<tr>"
+            f"<td>{_safe(item.column)}</td>"
+            f"<td>{_safe(item.method)}</td>"
+            f"<td>{item.old_outliers}</td>"
+            f"<td>{item.new_outliers}</td>"
+            f"<td>{item.delta_outliers}</td>"
+            f"<td>{item.old_outlier_pct:.2f}%</td>"
+            f"<td>{item.new_outlier_pct:.2f}%</td>"
+            f"<td>{item.delta_outlier_pct:.2f}%</td>"
+            f"<td>{_safe(item.lower_bound)}</td>"
+            f"<td>{_safe(item.upper_bound)}</td>"
+            f"<td>{'Yes' if item.is_spike else 'No'}</td>"
+            f"<td>{_safe(item.severity)}</td>"
+            "</tr>"
+        )
+
+    if not rows:
+        rows = '<tr><td colspan="12">No outlier changes detected.</td></tr>'
+
+    return f"""
+    <section class="card">
+      <h2>Outlier Diff</h2>
+      <table>
+        <tr>
+          <th>Column</th>
+          <th>Method</th>
+          <th>Old Outliers</th>
+          <th>New Outliers</th>
+          <th>Delta Outliers</th>
+          <th>Old Outlier %</th>
+          <th>New Outlier %</th>
+          <th>Delta Outlier %</th>
+          <th>Lower Bound</th>
+          <th>Upper Bound</th>
+          <th>Spike</th>
+          <th>Severity</th>
+        </tr>
+        {rows}
+      </table>
+    </section>
+    """
 
 def _template_css(template: str) -> str:
     base = """

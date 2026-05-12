@@ -98,6 +98,17 @@ def _stats_risk_score(report: DiffReport) -> int:
         else:
             score += 10
 
+    for outlier_diff in report.outlier_diff:
+        if not outlier_diff.is_spike:
+            continue
+
+        if outlier_diff.severity == "high":
+            score += 25
+        elif outlier_diff.severity == "medium":
+            score += 15
+        else:
+            score += 5
+
     for categorical_diff in report.categorical_diff:
         added_count = len(categorical_diff.values_added)
         removed_count = len(categorical_diff.values_removed)
@@ -105,4 +116,4 @@ def _stats_risk_score(report: DiffReport) -> int:
         score += min(added_count * 3, 15)
         score += min(removed_count * 4, 20)
 
-    return min(score, 30)
+    return min(score, 40)

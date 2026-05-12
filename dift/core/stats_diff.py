@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import polars as pl
 
-from dift.reports.models import CategoricalDiff, NumericDiff, StatsDiff
+from dift.reports.models import (
+    CategoricalDiff,
+    NumericDiff,
+    OutlierDiff,
+    StatsDiff,
+)
 
 NUMERIC_DTYPES = {
     pl.Int8,
@@ -25,13 +30,17 @@ def compare_stats(
     new: pl.DataFrame,
     top_n: int = 10,
     threshold: float = 0.1,
+    key: str | None = None,
 ) -> StatsDiff:
-    """Compare numeric summary stats and categorical top values."""
+    """Compare numeric summary stats, categorical top values, and outliers."""
     shared_cols = sorted(set(old.columns) & set(new.columns))
     numeric_diffs: list[NumericDiff] = []
     categorical_diffs: list[CategoricalDiff] = []
+    outlier_diffs: list[OutlierDiff] = []
 
     for column in shared_cols:
+        if key and column == key:
+            continue
         old_dtype = old.schema[column]
         new_dtype = new.schema[column]
 
@@ -98,6 +107,14 @@ def compare_stats(
                 )
             )
 
+            outlier_diffs.append(
+                _compare_outliers(
+                    column=column,
+                    old_series=old_series,
+                    new_series=new_series,
+                )
+            )
+
         elif old_dtype in CATEGORICAL_DTYPES and new_dtype in CATEGORICAL_DTYPES:
             old_counts = _top_counts(old, column, top_n)
             new_counts = _top_counts(new, column, top_n)
@@ -117,7 +134,83 @@ def compare_stats(
     return StatsDiff(
         numeric_diffs=numeric_diffs,
         categorical_diffs=categorical_diffs,
+        outlier_diffs=outlier_diffs,
     )
+
+
+def _compare_outliers(
+    column: str,
+    old_series: pl.Series,
+    new_series: pl.Series,
+) -> OutlierDiff:
+    method = "iqr"
+
+    old_values = old_series.drop_nulls()
+    new_values = new_series.drop_nulls()
+
+    if old_values.len() == 0 or new_values.len() == 0:
+        return OutlierDiff(column=column, method=method)
+
+    q1 = _safe_float(old_values.quantile(0.25))
+    q3 = _safe_float(old_values.quantile(0.75))
+
+    if q1 is None or q3 is None:
+        return OutlierDiff(column=column, method=method)
+
+    iqr = q3 - q1
+
+    if iqr == 0:
+        lower_bound = q1
+        upper_bound = q3
+    else:
+        lower_bound = q1 - (1.5 * iqr)
+        upper_bound = q3 + (1.5 * iqr)
+
+    old_outliers = _count_outliers(old_values, lower_bound, upper_bound)
+    new_outliers = _count_outliers(new_values, lower_bound, upper_bound)
+
+    old_rows = old_values.len() or 1
+    new_rows = new_values.len() or 1
+
+    old_outlier_pct = round(old_outliers / old_rows * 100, 4)
+    new_outlier_pct = round(new_outliers / new_rows * 100, 4)
+    delta_outlier_pct = round(new_outlier_pct - old_outlier_pct, 4)
+
+    delta_outliers = new_outliers - old_outliers
+    is_spike, severity = _classify_outlier_spike(delta_outlier_pct)
+
+    return OutlierDiff(
+        column=column,
+        method=method,
+        old_outliers=old_outliers,
+        new_outliers=new_outliers,
+        delta_outliers=delta_outliers,
+        old_outlier_pct=old_outlier_pct,
+        new_outlier_pct=new_outlier_pct,
+        delta_outlier_pct=delta_outlier_pct,
+        lower_bound=lower_bound,
+        upper_bound=upper_bound,
+        is_spike=is_spike,
+        severity=severity,
+    )
+
+
+def _count_outliers(
+    values: pl.Series,
+    lower_bound: float,
+    upper_bound: float,
+) -> int:
+    return values.filter((values < lower_bound) | (values > upper_bound)).len()
+
+
+def _classify_outlier_spike(delta_outlier_pct: float) -> tuple[bool, str]:
+    if delta_outlier_pct >= 15:
+        return True, "high"
+
+    if delta_outlier_pct >= 5:
+        return True, "medium"
+
+    return False, "low"
 
 
 def _top_counts(df: pl.DataFrame, column: str, top_n: int) -> dict[object, int]:
