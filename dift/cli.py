@@ -7,12 +7,12 @@ import typer
 from rich.console import Console
 
 from dift.core.comparator import compare_datasets
+from dift.io.config_loader import load_config
 from dift.reports.console_report import render_console
 from dift.reports.csv_report import render_csv
 from dift.reports.excel_report import render_excel
 from dift.reports.html_report import render_html
 from dift.reports.json_report import render_json
-from dift.io.config_loader import load_config
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -116,6 +116,7 @@ def main(
       dift old.csv new.csv --report excel --output report.xlsx
       dift old.csv new.csv --report html --output report.html
       dift old.csv new.csv --report html --template dark --output report.html
+      dift old.csv new.csv --config my_config.yaml
     """
 
     # loading config file
