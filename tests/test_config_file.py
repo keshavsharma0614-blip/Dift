@@ -1,4 +1,5 @@
 import json
+
 import toml
 import yaml
 from typer.testing import CliRunner
@@ -7,12 +8,10 @@ from dift.cli import compare_app
 
 runner = CliRunner()
 
+
 def test_cli_filepath_override_config(tmp_path):
     config_file = tmp_path / "config.yaml"
-    config_data = {
-        "old_dataset": "examples/old.csv",
-        "new_dataset": "examples/new.csv"  
-    }
+    config_data = {"old_dataset": "examples/old.csv", "new_dataset": "examples/new.csv"}
     config_file.write_text(yaml.dump(config_data))
 
     result = runner.invoke(compare_app, [
@@ -27,8 +26,8 @@ def test_cli_threshold_priority(tmp_path):
     config_file = tmp_path / "priority_config.yaml"
     config_data = {
         "old_dataset": "examples/old.csv",
-        "new_dataset": "examples/old.csv", 
-        "threshold": 0.2
+        "new_dataset": "examples/old.csv",
+        "threshold": 0.2,
     }
     config_file.write_text(yaml.dump(config_data))
 
@@ -43,6 +42,7 @@ def test_cli_threshold_priority(tmp_path):
     assert '"drift_threshold": 0.5' in result.stdout
     assert '"drift_threshold": 0.2' not in result.stdout
 
+
 def test_yaml_config(tmp_path):
     config_file = tmp_path / "test_config.yaml"
     content = {"old_dataset": "examples/old.csv", "new_dataset": "examples/new.csv"}
@@ -51,7 +51,6 @@ def test_yaml_config(tmp_path):
     result = runner.invoke(compare_app, ["--config", str(config_file)])
     assert result.exit_code == 0
     assert "Dift Dataset Comparison" in result.stdout
-
 
 
 def test_toml_config(tmp_path):
@@ -63,6 +62,7 @@ def test_toml_config(tmp_path):
     result = runner.invoke(compare_app, ["--config", str(config_file)])
     assert result.exit_code == 0
     assert "Dift Dataset Comparison" in result.stdout
+
 
 def test_json_config(tmp_path):
     config_file = tmp_path / "test_config.json"
