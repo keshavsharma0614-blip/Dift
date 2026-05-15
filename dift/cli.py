@@ -10,6 +10,7 @@ from rich.console import Console
 
 from dift.batch import find_dataset_pairs
 from dift.core.comparator import compare_datasets
+from dift.history import clear_history, load_history, save_history_record
 from dift.io.config_loader import load_config
 from dift.profiles import (
     create_profile,
@@ -30,6 +31,7 @@ compare_app = typer.Typer(
 
 profile_app = typer.Typer(help="Manage saved comparison profiles.")
 batch_app = typer.Typer(help="Run batch dataset comparisons.")
+history_app = typer.Typer(help="Manage comparison history.")
 
 console = Console()
 
@@ -68,6 +70,8 @@ def run_comparison(
     output: str | None,
     output_dir: str | None,
     template: str,
+    save_history: bool = False,
+    history_dir: str | None = None,
 ) -> None:
     missing_files: list[str] = []
 
@@ -110,6 +114,18 @@ def run_comparison(
         key=key,
         threshold=threshold,
     )
+
+    if save_history:
+        history_path = save_history_record(
+            report=diff_report,
+            old_dataset=old_dataset,
+            new_dataset=new_dataset,
+            key=key,
+            threshold=threshold,
+            report_format=report.value,
+            history_dir=history_dir,
+        )
+        success(f"Saved comparison history to {history_path}")
 
     if report == ReportFormat.json:
         payload = render_json(diff_report, output=output)
@@ -154,6 +170,16 @@ def main(
     output_dir: str | None = typer.Option(None, "--output-dir"),
     config: str | None = typer.Option(None, "--config", "-c"),
     template: str = typer.Option(DEFAULT_TEMPLATE, "--template"),
+    save_history: bool = typer.Option(
+        False,
+        "--history",
+        help="Save comparison history.",
+    ),
+    history_dir: str | None = typer.Option(
+        None,
+        "--history-dir",
+        help="Directory to save comparison history.",
+    ),
 ) -> None:
     config_data = load_config(config) if config else {}
 
@@ -191,6 +217,8 @@ def main(
             output=output,
             output_dir=output_dir,
             template=template,
+            save_history=save_history,
+            history_dir=history_dir,
         )
 
     except typer.Exit:
@@ -215,6 +243,16 @@ def batch_run(
         "--continue-on-error/--stop-on-error",
         help="Continue running other comparisons if one fails.",
     ),
+    save_history: bool = typer.Option(
+        False,
+        "--history",
+        help="Save comparison history.",
+    ),
+    history_dir: str | None = typer.Option(
+        None,
+        "--history-dir",
+        help="Directory to save comparison history.",
+    ),
 ) -> None:
     try:
         pairs = find_dataset_pairs(old_dir, new_dir)
@@ -235,9 +273,13 @@ def batch_run(
             success(f"Comparing {old_file.name}")
 
             pair_output_dir = None
+            pair_history_dir = history_dir
 
             if output_dir:
                 pair_output_dir = str(Path(output_dir) / dataset_name)
+
+            if history_dir:
+                pair_history_dir = str(Path(history_dir) / dataset_name)
 
             try:
                 run_comparison(
@@ -249,6 +291,8 @@ def batch_run(
                     output=None,
                     output_dir=pair_output_dir,
                     template=template,
+                    save_history=save_history,
+                    history_dir=pair_history_dir,
                 )
 
             except Exception as exc:
@@ -270,6 +314,46 @@ def batch_run(
     except Exception as exc:
         error(f"Error: {exc}")
         raise typer.Exit(code=1) from exc
+
+
+@history_app.command("list")
+def history_list(
+    history_dir: str | None = typer.Option(None, "--history-dir"),
+) -> None:
+    records = load_history(history_dir)
+
+    if not records:
+        warning("No comparison history found.")
+        return
+
+    for index, record in enumerate(records, start=1):
+        console.print(
+            f"{index}. {record['timestamp']} | "
+            f"risk={record['risk_level']} | "
+            f"{record['old_dataset']} -> {record['new_dataset']}"
+        )
+
+
+@history_app.command("show")
+def history_show(
+    index: int = typer.Argument(..., help="History record number."),
+    history_dir: str | None = typer.Option(None, "--history-dir"),
+) -> None:
+    records = load_history(history_dir)
+
+    if index < 1 or index > len(records):
+        error("Error: History record not found.")
+        raise typer.Exit(code=1)
+
+    console.print_json(data=records[index - 1])
+
+
+@history_app.command("clear")
+def history_clear(
+    history_dir: str | None = typer.Option(None, "--history-dir"),
+) -> None:
+    path = clear_history(history_dir)
+    success(f"Cleared comparison history at {path}")
 
 
 @profile_app.command("create")
@@ -366,6 +450,16 @@ def profile_run(
     output_dir: str | None = typer.Option(None, "--output-dir"),
     template: str | None = typer.Option(None, "--template"),
     profiles_file: str | None = typer.Option(None, "--profiles-file"),
+    save_history: bool = typer.Option(
+        False,
+        "--history",
+        help="Save comparison history.",
+    ),
+    history_dir: str | None = typer.Option(
+        None,
+        "--history-dir",
+        help="Directory to save comparison history.",
+    ),
 ) -> None:
     try:
         profile = get_profile(name, profiles_file)
@@ -400,6 +494,8 @@ def profile_run(
                 if template is not None
                 else profile.get("template", DEFAULT_TEMPLATE)
             ),
+            save_history=save_history,
+            history_dir=history_dir,
         )
 
     except typer.Exit:
@@ -419,6 +515,11 @@ def app() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "batch":
         sys.argv.pop(1)
         batch_app()
+        return
+
+    if len(sys.argv) > 1 and sys.argv[1] == "history":
+        sys.argv.pop(1)
+        history_app()
         return
 
     compare_app()
