@@ -1,4 +1,5 @@
 import json
+
 import yaml
 from typer.testing import CliRunner
 
@@ -7,7 +8,10 @@ from dift.cli import compare_app
 try:
     import tomllib
 except ModuleNotFoundError:
-    import tomli as tomllib
+    try:
+        import tomli as tomllib
+    except ImportError:
+        tomllib = None
 
 runner = CliRunner()
 
