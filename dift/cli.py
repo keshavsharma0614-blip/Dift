@@ -187,8 +187,8 @@ def run_comparison(
 
 @compare_app.command()
 def main(
-    old_dataset: str = typer.Argument(..., help="Path to the old dataset."),
-    new_dataset: str = typer.Argument(..., help="Path to the new dataset."),
+    old_dataset: str | None = typer.Argument(None, help="Path to the old dataset."),
+    new_dataset: str | None = typer.Argument(None, help="Path to the new dataset."),
     key: str | None = typer.Option(None, "--key", "-k"),
     threshold: float = typer.Option(DEFAULT_THRESHOLD, "--threshold", "-t"),
     report: ReportFormat = typer.Option(DEFAULT_REPORT, "--report", "-r"),

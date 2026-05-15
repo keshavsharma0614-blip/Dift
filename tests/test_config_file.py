@@ -22,6 +22,8 @@ def test_cli_filepath_override_config(tmp_path):
         "--report", "json"
     ])
     assert '"row_delta": 0' in result.stdout
+
+    
 def test_cli_threshold_priority(tmp_path):
     config_file = tmp_path / "priority_config.yaml"
     config_data = {
