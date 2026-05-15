@@ -105,7 +105,7 @@ Dift helps teams catch risky data changes before they cause damage.
 Customize your HTML reports:
 
 ```bash
-dift old.csv new.csv --report html --template cleans
+dift old.csv new.csv --report html --template clean
 ```
 
 Available templates:
@@ -173,7 +173,7 @@ dift old.csv new.csv --config dift.yaml
 * **TOML** (`.toml`)
 * **JSON** (`.json`)
 
-### Example Configuration (`dift.yaml`)
+### Example Configuration (`config_sample.yaml`)
 ```yaml
 key: "customer_id"
 threshold: 0.05
