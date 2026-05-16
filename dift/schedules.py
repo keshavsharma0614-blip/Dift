@@ -36,6 +36,8 @@ def create_schedule(
     cron: str,
     history: bool = True,
     strict_exit_codes: bool = True,
+    quiet: bool = True,
+    no_color: bool = True,
     path: str | None = None,
     overwrite: bool = False,
 ) -> Path:
@@ -51,6 +53,8 @@ def create_schedule(
         "cron": cron,
         "history": history,
         "strict_exit_codes": strict_exit_codes,
+        "quiet": quiet,
+        "no_color": no_color,
     }
 
     return save_schedules(schedules, path)
@@ -83,6 +87,8 @@ def build_profile_command(
     profile: str,
     history: bool = True,
     strict_exit_codes: bool = True,
+    quiet: bool = True,
+    no_color: bool = True,
 ) -> str:
     parts = ["dift", "profile", "run", profile]
 
@@ -91,5 +97,11 @@ def build_profile_command(
 
     if strict_exit_codes:
         parts.append("--strict-exit-codes")
+
+    if quiet:
+        parts.append("--quiet")
+
+    if no_color:
+        parts.append("--no-color")
 
     return " ".join(parts)
