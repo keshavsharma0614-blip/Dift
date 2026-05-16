@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import os
 import sys
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
+from time import perf_counter
 
 import typer
 from rich.console import Console
-
-from datetime import UTC, datetime
-from time import perf_counter
 
 from dift.batch import find_dataset_pairs
 from dift.core.comparator import compare_datasets
@@ -63,6 +62,26 @@ DEFAULT_THRESHOLD = 0.1
 DEFAULT_REPORT = ReportFormat.console
 DEFAULT_TEMPLATE = "default"
 
+LOW_RISK_EXIT_CODE = 0
+MEDIUM_RISK_EXIT_CODE = 1
+HIGH_RISK_EXIT_CODE = 2
+ERROR_EXIT_CODE = 3
+
+
+def risk_exit_code(risk_level: str) -> int:
+    risk = risk_level.lower()
+
+    if risk == "low":
+        return LOW_RISK_EXIT_CODE
+
+    if risk == "medium":
+        return MEDIUM_RISK_EXIT_CODE
+
+    if risk == "high":
+        return HIGH_RISK_EXIT_CODE
+
+    return ERROR_EXIT_CODE
+
 
 def run_comparison(
     old_dataset: str | None,
@@ -76,6 +95,7 @@ def run_comparison(
     config: str | None = None,
     save_history: bool = False,
     history_dir: str | None = None,
+    strict_exit_codes: bool = False,
 ) -> None:
     config_data = load_config(config) if config else {}
 
@@ -111,7 +131,7 @@ def run_comparison(
         warning("\nExample:")
         warning("  dift old.csv new.csv")
         warning("  dift --config config.yaml")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=ERROR_EXIT_CODE)
 
     missing_files: list[str] = []
 
@@ -128,11 +148,11 @@ def run_comparison(
             warning("Tip:")
             warning(f"Use examples/{name} or provide a full path.\n")
 
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=ERROR_EXIT_CODE)
 
     if output and output_dir:
         error("Error: Use either --output or --output-dir, not both.")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=ERROR_EXIT_CODE)
 
     if output:
         output_parent = os.path.dirname(output)
@@ -218,6 +238,9 @@ def run_comparison(
     else:
         render_console(diff_report)
 
+    if strict_exit_codes:
+        raise typer.Exit(code=risk_exit_code(diff_report.summary.risk_level))
+
 
 @compare_app.command()
 def main(
@@ -240,6 +263,11 @@ def main(
         "--history-dir",
         help="Directory to save comparison history.",
     ),
+    strict_exit_codes: bool = typer.Option(
+        False,
+        "--strict-exit-codes",
+        help="Exit with risk-based codes: 0 low, 1 medium, 2 high, 3 error.",
+    ),
 ) -> None:
     try:
         run_comparison(
@@ -254,6 +282,7 @@ def main(
             config=config,
             save_history=save_history,
             history_dir=history_dir,
+            strict_exit_codes=strict_exit_codes,
         )
 
     except typer.Exit:
@@ -261,7 +290,7 @@ def main(
 
     except Exception as exc:
         error(f"Error: {repr(exc)}")
-        raise typer.Exit(code=1) from exc
+        raise typer.Exit(code=ERROR_EXIT_CODE) from exc
 
 
 @batch_app.callback(invoke_without_command=True)
@@ -288,13 +317,18 @@ def batch_run(
         "--history-dir",
         help="Directory to save comparison history.",
     ),
+    strict_exit_codes: bool = typer.Option(
+        False,
+        "--strict-exit-codes",
+        help="Exit with risk-based codes during batch comparisons.",
+    ),
 ) -> None:
     try:
         pairs = find_dataset_pairs(old_dir, new_dir)
 
         if not pairs:
             warning("No matching dataset files found.")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=ERROR_EXIT_CODE)
 
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
@@ -328,18 +362,32 @@ def batch_run(
                     template=template,
                     save_history=save_history,
                     history_dir=pair_history_dir,
+                    strict_exit_codes=strict_exit_codes,
                 )
+
+            except typer.Exit as exc:
+                if exc.exit_code in {
+                    MEDIUM_RISK_EXIT_CODE,
+                    HIGH_RISK_EXIT_CODE,
+                } and strict_exit_codes:
+                    raise
+
+                failures += 1
+                error(f"Failed comparison for {old_file.name}: exit code {exc.exit_code}")
+
+                if not continue_on_error:
+                    raise typer.Exit(code=ERROR_EXIT_CODE) from exc
 
             except Exception as exc:
                 failures += 1
                 error(f"Failed comparison for {old_file.name}: {exc}")
 
                 if not continue_on_error:
-                    raise typer.Exit(code=1) from exc
+                    raise typer.Exit(code=ERROR_EXIT_CODE) from exc
 
         if failures:
             error(f"Batch completed with {failures} failure(s).")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=ERROR_EXIT_CODE)
 
         success("Batch comparison completed successfully.")
 
@@ -348,7 +396,7 @@ def batch_run(
 
     except Exception as exc:
         error(f"Error: {exc}")
-        raise typer.Exit(code=1) from exc
+        raise typer.Exit(code=ERROR_EXIT_CODE) from exc
 
 
 @history_app.command("list")
@@ -378,7 +426,7 @@ def history_show(
 
     if index < 1 or index > len(records):
         error("Error: History record not found.")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=ERROR_EXIT_CODE)
 
     console.print_json(data=records[index - 1])
 
@@ -425,7 +473,7 @@ def profile_create(
 
     except Exception as exc:
         error(f"Error: {exc}")
-        raise typer.Exit(code=1) from exc
+        raise typer.Exit(code=ERROR_EXIT_CODE) from exc
 
 
 @profile_app.command("list")
@@ -444,7 +492,7 @@ def profile_list(
 
     except Exception as exc:
         error(f"Error: {exc}")
-        raise typer.Exit(code=1) from exc
+        raise typer.Exit(code=ERROR_EXIT_CODE) from exc
 
 
 @profile_app.command("show")
@@ -458,7 +506,7 @@ def profile_show(
 
     except Exception as exc:
         error(f"Error: {exc}")
-        raise typer.Exit(code=1) from exc
+        raise typer.Exit(code=ERROR_EXIT_CODE) from exc
 
 
 @profile_app.command("delete")
@@ -472,7 +520,7 @@ def profile_delete(
 
     except Exception as exc:
         error(f"Error: {exc}")
-        raise typer.Exit(code=1) from exc
+        raise typer.Exit(code=ERROR_EXIT_CODE) from exc
 
 
 @profile_app.command("run")
@@ -495,6 +543,11 @@ def profile_run(
         "--history-dir",
         help="Directory to save comparison history.",
     ),
+    strict_exit_codes: bool = typer.Option(
+        False,
+        "--strict-exit-codes",
+        help="Exit with risk-based codes: 0 low, 1 medium, 2 high, 3 error.",
+    ),
 ) -> None:
     try:
         profile = get_profile(name, profiles_file)
@@ -504,7 +557,7 @@ def profile_run(
 
         if not old_dataset or not new_dataset:
             error("Error: Profile must define old_dataset and new_dataset.")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=ERROR_EXIT_CODE)
 
         profile_report = profile.get("report", DEFAULT_REPORT.value)
 
@@ -531,6 +584,7 @@ def profile_run(
             ),
             save_history=save_history,
             history_dir=history_dir,
+            strict_exit_codes=strict_exit_codes,
         )
 
     except typer.Exit:
@@ -538,7 +592,7 @@ def profile_run(
 
     except Exception as exc:
         error(f"Error: {exc}")
-        raise typer.Exit(code=1) from exc
+        raise typer.Exit(code=ERROR_EXIT_CODE) from exc
 
 
 def app() -> None:
