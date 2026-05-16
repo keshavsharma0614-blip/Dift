@@ -5,8 +5,17 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class ReportMetadata(BaseModel):
     tool: str = "dift"
-    version: str = "0.3.0"
+    version: str = "0.5.0"
     report_type: str = "dataset_diff"
+
+    generated_at: str | None = None
+    old_source: str | None = None
+    new_source: str | None = None
+    key: str | None = None
+    threshold: float | None = None
+    report_format: str | None = None
+    template: str | None = None
+    runtime_seconds: float | None = None
 
 
 class Summary(BaseModel):
@@ -65,6 +74,7 @@ class DuplicateDiff(BaseModel):
     is_spike: bool = False
     severity: str = "low"
 
+
 class QualityDiff(BaseModel):
     null_diffs: list[NullDiff] = Field(default_factory=list)
     duplicate_diff: DuplicateDiff
@@ -81,6 +91,29 @@ class NumericDiff(BaseModel):
     delta_mean: float | None = None
     old_std: float | None = None
     new_std: float | None = None
+    delta_std: float | None = None
+    delta_range: float | None = None
+    mean_shift_pct: float | None = None
+    std_shift_pct: float | None = None
+    range_shift_pct: float | None = None
+    drift_threshold: float | None = None
+    is_drifted: bool = False
+    severity: str = "low"
+
+
+class OutlierDiff(BaseModel):
+    column: str
+    method: str = "iqr"
+    old_outliers: int = 0
+    new_outliers: int = 0
+    delta_outliers: int = 0
+    old_outlier_pct: float = 0.0
+    new_outlier_pct: float = 0.0
+    delta_outlier_pct: float = 0.0
+    lower_bound: float | None = None
+    upper_bound: float | None = None
+    is_spike: bool = False
+    severity: str = "low"
 
 
 class CategoricalDiff(BaseModel):
@@ -89,11 +122,16 @@ class CategoricalDiff(BaseModel):
     values_removed: list[str] = Field(default_factory=list)
     old_top_values: dict[str, int] = Field(default_factory=dict)
     new_top_values: dict[str, int] = Field(default_factory=dict)
+    frequency_shifts: dict[str, float] = Field(default_factory=dict)
+    max_frequency_shift: float = 0.0
+    is_shifted: bool = False
+    severity: str = "low"
 
 
 class StatsDiff(BaseModel):
     numeric_diffs: list[NumericDiff] = Field(default_factory=list)
     categorical_diffs: list[CategoricalDiff] = Field(default_factory=list)
+    outlier_diffs: list[OutlierDiff] = Field(default_factory=list)
 
 
 class DiffReport(BaseModel):
@@ -111,3 +149,4 @@ class DiffReport(BaseModel):
         default_factory=list,
         alias="categorical",
     )
+    outlier_diff: list[OutlierDiff] = Field(default_factory=list, alias="outliers")

@@ -49,6 +49,13 @@ def _percent_change(old_value: int, new_value: int) -> str:
     return "[green]0.00%[/green]"
 
 
+def _format_optional_pct(value: float | None) -> str:
+    if value is None:
+        return "N/A"
+
+    return f"{value * 100:.2f}%"
+
+
 def render_console(report: DiffReport) -> None:
     """Render a clean terminal report."""
     console = Console()
@@ -131,13 +138,19 @@ def render_console(report: DiffReport) -> None:
         console.print(f"[dim]{report.row_diff.note}[/dim]")
 
     duplicate = report.quality_diff.duplicate_diff
-    null_spikes = [
-        diff
-        for diff in report.quality_diff.null_diffs
-        if diff.is_spike
-    ]
+    null_spikes = [diff for diff in report.quality_diff.null_diffs if diff.is_spike]
+    numeric_drifts = [diff for diff in report.numeric_diff if diff.is_drifted]
+    outlier_spikes = [diff for diff in report.outlier_diff if diff.is_spike]
+    categorical_shifts = [diff for diff in report.categorical_diff if diff.is_shifted]
 
-    if duplicate.is_spike or duplicate.delta_duplicates > 0 or null_spikes:
+    if (
+        duplicate.is_spike
+        or duplicate.delta_duplicates > 0
+        or null_spikes
+        or numeric_drifts
+        or outlier_spikes
+        or categorical_shifts
+    ):
         console.print("[bold red]Warnings[/bold red]")
 
     if duplicate.is_spike:
@@ -161,5 +174,36 @@ def render_console(report: DiffReport) -> None:
         console.print(
             f"[{spike_style}]Null spike:[/{spike_style}] "
             f"'{diff.column}' increased by {diff.delta_null_pct:.2f}% "
+            f"({diff.severity})"
+        )
+
+    for diff in numeric_drifts:
+        drift_style = _risk_style(diff.severity)
+
+        console.print(
+            f"[{drift_style}]Numeric drift:[/{drift_style}] "
+            f"'{diff.column}' "
+            f"mean shift {_format_optional_pct(diff.mean_shift_pct)}, "
+            f"std shift {_format_optional_pct(diff.std_shift_pct)}, "
+            f"range shift {_format_optional_pct(diff.range_shift_pct)} "
+            f"({diff.severity}, threshold {diff.drift_threshold})"
+        )
+
+    for diff in outlier_spikes:
+        spike_style = _risk_style(diff.severity)
+
+        console.print(
+            f"[{spike_style}]Outlier spike:[/{spike_style}] "
+            f"'{diff.column}' increased by {diff.delta_outlier_pct:.2f}% "
+            f"({diff.severity})"
+        )
+
+    for diff in categorical_shifts:
+        shift_style = _risk_style(diff.severity)
+
+        console.print(
+            f"[{shift_style}]Categorical shift:[/{shift_style}] "
+            f"'{diff.column}' max frequency shift "
+            f"{diff.max_frequency_shift * 100:.2f}% "
             f"({diff.severity})"
         )

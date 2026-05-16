@@ -6,7 +6,6 @@ from typing import Any
 
 from dift.reports.models import DiffReport
 
-
 SUPPORTED_TEMPLATES = {
     "default",
     "clean",
@@ -26,8 +25,7 @@ def render_html(
     if template not in SUPPORTED_TEMPLATES:
         supported = ", ".join(sorted(SUPPORTED_TEMPLATES))
         raise ValueError(
-            f"Unsupported HTML template '{template}'. "
-            f"Supported templates: {supported}"
+            f"Unsupported HTML template '{template}'. Supported templates: {supported}"
         )
 
     output_path = Path(output or "dift_report.html")
@@ -61,9 +59,13 @@ def _build_html(report: DiffReport, template: str) -> str:
     </header>
 
     {_summary_section(report)}
+    {_metadata_section(report)}
     {_schema_section(report)}
     {_row_section(report)}
     {_quality_section(report)}
+    {_numeric_section(report)}
+    {_outlier_section(report)}
+    {_categorical_section(report)}
 
   </main>
 </body>
@@ -84,6 +86,30 @@ def _summary_section(report: DiffReport) -> str:
         <tr><td>New columns</td><td>{report.summary.new_columns}</td></tr>
         <tr><td>Column delta</td><td>{report.summary.column_delta}</td></tr>
         <tr><td>Risk level</td><td>{_safe(report.summary.risk_level)}</td></tr>
+      </table>
+    </section>
+    """
+
+
+def _metadata_section(report: DiffReport) -> str:
+    metadata = report.metadata
+
+    return f"""
+    <section class="card">
+      <h2>Report Metadata</h2>
+      <table>
+        <tr><th>Metric</th><th>Value</th></tr>
+        <tr><td>Tool</td><td>{_safe(metadata.tool)}</td></tr>
+        <tr><td>Version</td><td>{_safe(metadata.version)}</td></tr>
+        <tr><td>Report type</td><td>{_safe(metadata.report_type)}</td></tr>
+        <tr><td>Generated at</td><td>{_safe(metadata.generated_at)}</td></tr>
+        <tr><td>Old source</td><td>{_safe(metadata.old_source)}</td></tr>
+        <tr><td>New source</td><td>{_safe(metadata.new_source)}</td></tr>
+        <tr><td>Key</td><td>{_safe(metadata.key)}</td></tr>
+        <tr><td>Threshold</td><td>{_safe(metadata.threshold)}</td></tr>
+        <tr><td>Report format</td><td>{_safe(metadata.report_format)}</td></tr>
+        <tr><td>Template</td><td>{_safe(metadata.template)}</td></tr>
+        <tr><td>Runtime seconds</td><td>{_safe(metadata.runtime_seconds)}</td></tr>
       </table>
     </section>
     """
@@ -195,6 +221,144 @@ def _quality_section(report: DiffReport) -> str:
         <tr><td>Duplicate basis</td><td>{_safe(duplicate.duplicate_basis)}</td></tr>
         <tr><td>Spike</td><td>{"Yes" if duplicate.is_spike else "No"}</td></tr>
         <tr><td>Severity</td><td>{_safe(duplicate.severity)}</td></tr>
+      </table>
+    </section>
+    """
+
+
+def _numeric_section(report: DiffReport) -> str:
+    rows = ""
+
+    for item in report.numeric_diff:
+        rows += (
+            "<tr>"
+            f"<td>{_safe(item.column)}</td>"
+            f"<td>{_safe(item.old_mean)}</td>"
+            f"<td>{_safe(item.new_mean)}</td>"
+            f"<td>{_safe(item.delta_mean)}</td>"
+            f"<td>{_safe_pct(item.mean_shift_pct)}</td>"
+            f"<td>{_safe(item.old_std)}</td>"
+            f"<td>{_safe(item.new_std)}</td>"
+            f"<td>{_safe(item.delta_std)}</td>"
+            f"<td>{_safe_pct(item.std_shift_pct)}</td>"
+            f"<td>{_safe(item.delta_range)}</td>"
+            f"<td>{_safe_pct(item.range_shift_pct)}</td>"
+            f"<td>{_safe(item.drift_threshold)}</td>"
+            f"<td>{'Yes' if item.is_drifted else 'No'}</td>"
+            f"<td>{_safe(item.severity)}</td>"
+            "</tr>"
+        )
+
+    if not rows:
+        rows = '<tr><td colspan="14">No numeric drift detected.</td></tr>'
+
+    return f"""
+    <section class="card">
+      <h2>Numeric Drift</h2>
+      <table>
+        <tr>
+          <th>Column</th>
+          <th>Old Mean</th>
+          <th>New Mean</th>
+          <th>Delta Mean</th>
+          <th>Mean Shift %</th>
+          <th>Old Std</th>
+          <th>New Std</th>
+          <th>Delta Std</th>
+          <th>Std Shift %</th>
+          <th>Delta Range</th>
+          <th>Range Shift %</th>
+          <th>Threshold</th>
+          <th>Drifted</th>
+          <th>Severity</th>
+        </tr>
+        {rows}
+      </table>
+    </section>
+    """
+
+
+def _outlier_section(report: DiffReport) -> str:
+    rows = ""
+
+    for item in report.outlier_diff:
+        rows += (
+            "<tr>"
+            f"<td>{_safe(item.column)}</td>"
+            f"<td>{_safe(item.method)}</td>"
+            f"<td>{item.old_outliers}</td>"
+            f"<td>{item.new_outliers}</td>"
+            f"<td>{item.delta_outliers}</td>"
+            f"<td>{item.old_outlier_pct:.2f}%</td>"
+            f"<td>{item.new_outlier_pct:.2f}%</td>"
+            f"<td>{item.delta_outlier_pct:.2f}%</td>"
+            f"<td>{_safe(item.lower_bound)}</td>"
+            f"<td>{_safe(item.upper_bound)}</td>"
+            f"<td>{'Yes' if item.is_spike else 'No'}</td>"
+            f"<td>{_safe(item.severity)}</td>"
+            "</tr>"
+        )
+
+    if not rows:
+        rows = '<tr><td colspan="12">No outlier changes detected.</td></tr>'
+
+    return f"""
+    <section class="card">
+      <h2>Outlier Diff</h2>
+      <table>
+        <tr>
+          <th>Column</th>
+          <th>Method</th>
+          <th>Old Outliers</th>
+          <th>New Outliers</th>
+          <th>Delta Outliers</th>
+          <th>Old Outlier %</th>
+          <th>New Outlier %</th>
+          <th>Delta Outlier %</th>
+          <th>Lower Bound</th>
+          <th>Upper Bound</th>
+          <th>Spike</th>
+          <th>Severity</th>
+        </tr>
+        {rows}
+      </table>
+    </section>
+    """
+
+
+def _categorical_section(report: DiffReport) -> str:
+    rows = ""
+
+    for item in report.categorical_diff:
+        rows += (
+            "<tr>"
+            f"<td>{_safe(item.column)}</td>"
+            f"<td>{_safe_list(item.values_added)}</td>"
+            f"<td>{_safe_list(item.values_removed)}</td>"
+            f"<td>{_safe_frequency_shifts(item.frequency_shifts)}</td>"
+            f"<td>{item.max_frequency_shift:.2%}</td>"
+            f"<td>{'Yes' if item.is_shifted else 'No'}</td>"
+            f"<td>{_safe(item.severity)}</td>"
+            "</tr>"
+        )
+
+    if not rows:
+        rows = '<tr><td colspan="7">No categorical changes detected.</td></tr>'
+
+    return f"""
+    <section class="card">
+      <h2>Categorical Diff</h2>
+      <table>
+        <tr>
+          <th>Column</th>
+          <th>Values Added</th>
+          <th>Values Removed</th>
+          <th>Frequency Shifts</th>
+          <th>Max Frequency Shift</th>
+          <th>Shifted</th>
+          <th>Severity</th>
+        </tr>
+        {rows}
       </table>
     </section>
     """
@@ -480,6 +644,20 @@ def _template_css(template: str) -> str:
     }
 
     return base + themes[template]
+
+
+def _safe_frequency_shifts(shifts: dict[str, float]) -> str:
+    if not shifts:
+        return ""
+
+    return ", ".join(f"{_safe(value)}: {shift:.2%}" for value, shift in shifts.items())
+
+
+def _safe_pct(value: float | None) -> str:
+    if value is None:
+        return ""
+
+    return f"{value:.2%}"
 
 
 def _safe(value: Any) -> str:

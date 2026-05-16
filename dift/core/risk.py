@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dift.reports.models import DiffReport
 
-
 LOW_RISK_THRESHOLD = 30
 HIGH_RISK_THRESHOLD = 70
 
@@ -89,21 +88,25 @@ def _stats_risk_score(report: DiffReport) -> int:
     score = 0
 
     for numeric_diff in report.numeric_diff:
-        old_mean = numeric_diff.old_mean
-        new_mean = numeric_diff.new_mean
-        delta_mean = numeric_diff.delta_mean
-
-        if old_mean is None or new_mean is None or delta_mean is None:
+        if not numeric_diff.is_drifted:
             continue
 
-        baseline = abs(old_mean) or 1
-        mean_shift_pct = abs(delta_mean) / baseline * 100
-
-        if mean_shift_pct >= 50:
-            score += 15
-        elif mean_shift_pct >= 20:
+        if numeric_diff.severity == "high":
+            score += 30
+        elif numeric_diff.severity == "medium":
+            score += 20
+        else:
             score += 10
-        elif mean_shift_pct >= 10:
+
+    for outlier_diff in report.outlier_diff:
+        if not outlier_diff.is_spike:
+            continue
+
+        if outlier_diff.severity == "high":
+            score += 25
+        elif outlier_diff.severity == "medium":
+            score += 15
+        else:
             score += 5
 
     for categorical_diff in report.categorical_diff:
@@ -113,4 +116,14 @@ def _stats_risk_score(report: DiffReport) -> int:
         score += min(added_count * 3, 15)
         score += min(removed_count * 4, 20)
 
-    return min(score, 30)
+        if not categorical_diff.is_shifted:
+            continue
+
+        if categorical_diff.severity == "high":
+            score += 25
+        elif categorical_diff.severity == "medium":
+            score += 15
+        else:
+            score += 5
+
+    return min(score, 40)
