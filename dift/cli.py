@@ -46,14 +46,25 @@ history_app = typer.Typer(help="Manage comparison history.")
 schedule_app = typer.Typer(help="Manage scheduled comparison workflows.")
 
 console = Console()
+QUIET_MODE = False
+
+
+def configure_output(quiet: bool = False, no_color: bool = False) -> None:
+    global console
+    global QUIET_MODE
+
+    QUIET_MODE = quiet
+    console = Console(no_color=no_color)
 
 
 def success(msg: str) -> None:
-    console.print(f"[green]{msg}[/green]")
+    if not QUIET_MODE:
+        console.print(f"[green]{msg}[/green]")
 
 
 def warning(msg: str) -> None:
-    console.print(f"[yellow]{msg}[/yellow]")
+    if not QUIET_MODE:
+        console.print(f"[yellow]{msg}[/yellow]")
 
 
 def error(msg: str) -> None:
@@ -107,7 +118,11 @@ def run_comparison(
     save_history: bool = False,
     history_dir: str | None = None,
     strict_exit_codes: bool = False,
+    quiet: bool = False,
+    no_color: bool = False,
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     config_data = load_config(config, env=env) if config else {}
 
     threshold_config = resolve_threshold_config(
@@ -226,17 +241,17 @@ def run_comparison(
     if report == ReportFormat.json:
         payload = render_json(diff_report, output=output)
 
-        if output is None:
+        if output is None and not quiet:
             console.print(payload)
-        else:
+        elif output is not None:
             success(f"Wrote JSON report to {output}")
 
     elif report == ReportFormat.csv:
         payload = render_csv(diff_report, output=output)
 
-        if output is None:
+        if output is None and not quiet:
             console.print(payload)
-        else:
+        elif output is not None:
             success(f"Wrote CSV report to {output}")
 
     elif report == ReportFormat.excel:
@@ -252,7 +267,8 @@ def run_comparison(
         success(f"Wrote HTML report to {output_path}")
 
     else:
-        render_console(diff_report)
+        if not quiet:
+            render_console(diff_report)
 
     if strict_exit_codes:
         raise typer.Exit(code=risk_exit_code(diff_report.summary.risk_level))
@@ -289,7 +305,19 @@ def main(
         "--strict-exit-codes",
         help="Exit with risk-based codes: 0 low, 1 medium, 2 high, 3 error.",
     ),
+    quiet: bool = typer.Option(
+        False,
+        "--quiet",
+        help="Suppress non-error output for automation workflows.",
+    ),
+    no_color: bool = typer.Option(
+        False,
+        "--no-color",
+        help="Disable colored terminal output.",
+    ),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     try:
         run_comparison(
             old_dataset=old_dataset,
@@ -305,6 +333,8 @@ def main(
             save_history=save_history,
             history_dir=history_dir,
             strict_exit_codes=strict_exit_codes,
+            quiet=quiet,
+            no_color=no_color,
         )
 
     except typer.Exit:
@@ -344,7 +374,19 @@ def batch_run(
         "--strict-exit-codes",
         help="Exit with risk-based codes during batch comparisons.",
     ),
+    quiet: bool = typer.Option(
+        False,
+        "--quiet",
+        help="Suppress non-error output for automation workflows.",
+    ),
+    no_color: bool = typer.Option(
+        False,
+        "--no-color",
+        help="Disable colored terminal output.",
+    ),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     try:
         pairs = find_dataset_pairs(old_dir, new_dir)
 
@@ -385,6 +427,8 @@ def batch_run(
                     save_history=save_history,
                     history_dir=pair_history_dir,
                     strict_exit_codes=strict_exit_codes,
+                    quiet=quiet,
+                    no_color=no_color,
                 )
 
             except typer.Exit as exc:
@@ -424,11 +468,18 @@ def batch_run(
 @history_app.command("list")
 def history_list(
     history_dir: str | None = typer.Option(None, "--history-dir"),
+    quiet: bool = typer.Option(False, "--quiet"),
+    no_color: bool = typer.Option(False, "--no-color"),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     records = load_history(history_dir)
 
     if not records:
         warning("No comparison history found.")
+        return
+
+    if quiet:
         return
 
     for index, record in enumerate(records, start=1):
@@ -443,20 +494,29 @@ def history_list(
 def history_show(
     index: int = typer.Argument(..., help="History record number."),
     history_dir: str | None = typer.Option(None, "--history-dir"),
+    quiet: bool = typer.Option(False, "--quiet"),
+    no_color: bool = typer.Option(False, "--no-color"),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     records = load_history(history_dir)
 
     if index < 1 or index > len(records):
         error("Error: History record not found.")
         raise typer.Exit(code=ERROR_EXIT_CODE)
 
-    console.print_json(data=records[index - 1])
+    if not quiet:
+        console.print_json(data=records[index - 1])
 
 
 @history_app.command("clear")
 def history_clear(
     history_dir: str | None = typer.Option(None, "--history-dir"),
+    quiet: bool = typer.Option(False, "--quiet"),
+    no_color: bool = typer.Option(False, "--no-color"),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     path = clear_history(history_dir)
     success(f"Cleared comparison history at {path}")
 
@@ -474,7 +534,11 @@ def profile_create(
     template: str = typer.Option(DEFAULT_TEMPLATE, "--template"),
     profiles_file: str | None = typer.Option(None, "--profiles-file"),
     overwrite: bool = typer.Option(False, "--overwrite"),
+    quiet: bool = typer.Option(False, "--quiet"),
+    no_color: bool = typer.Option(False, "--no-color"),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     try:
         create_profile(
             name=name,
@@ -501,12 +565,19 @@ def profile_create(
 @profile_app.command("list")
 def profile_list(
     profiles_file: str | None = typer.Option(None, "--profiles-file"),
+    quiet: bool = typer.Option(False, "--quiet"),
+    no_color: bool = typer.Option(False, "--no-color"),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     try:
         names = list_profile_names(profiles_file)
 
         if not names:
             warning("No profiles found.")
+            return
+
+        if quiet:
             return
 
         for name in names:
@@ -521,10 +592,16 @@ def profile_list(
 def profile_show(
     name: str = typer.Argument(..., help="Profile name."),
     profiles_file: str | None = typer.Option(None, "--profiles-file"),
+    quiet: bool = typer.Option(False, "--quiet"),
+    no_color: bool = typer.Option(False, "--no-color"),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     try:
         profile = get_profile(name, profiles_file)
-        console.print_json(data=profile)
+
+        if not quiet:
+            console.print_json(data=profile)
 
     except Exception as exc:
         error(f"Error: {exc}")
@@ -535,7 +612,11 @@ def profile_show(
 def profile_delete(
     name: str = typer.Argument(..., help="Profile name."),
     profiles_file: str | None = typer.Option(None, "--profiles-file"),
+    quiet: bool = typer.Option(False, "--quiet"),
+    no_color: bool = typer.Option(False, "--no-color"),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     try:
         delete_profile(name, profiles_file)
         success(f"Deleted profile '{name}'.")
@@ -570,7 +651,19 @@ def profile_run(
         "--strict-exit-codes",
         help="Exit with risk-based codes: 0 low, 1 medium, 2 high, 3 error.",
     ),
+    quiet: bool = typer.Option(
+        False,
+        "--quiet",
+        help="Suppress non-error output for automation workflows.",
+    ),
+    no_color: bool = typer.Option(
+        False,
+        "--no-color",
+        help="Disable colored terminal output.",
+    ),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     try:
         profile = get_profile(name, profiles_file)
 
@@ -607,6 +700,8 @@ def profile_run(
             save_history=save_history,
             history_dir=history_dir,
             strict_exit_codes=strict_exit_codes,
+            quiet=quiet,
+            no_color=no_color,
         )
 
     except typer.Exit:
@@ -632,6 +727,16 @@ def schedule_create(
         "--strict-exit-codes/--no-strict-exit-codes",
         help="Include --strict-exit-codes when running the scheduled profile.",
     ),
+    quiet_schedule: bool = typer.Option(
+        True,
+        "--quiet/--no-quiet",
+        help="Include --quiet in the scheduled command.",
+    ),
+    no_color_schedule: bool = typer.Option(
+        True,
+        "--no-color/--color",
+        help="Include --no-color in the scheduled command.",
+    ),
     schedules_file: str | None = typer.Option(None, "--schedules-file"),
     overwrite: bool = typer.Option(False, "--overwrite"),
 ) -> None:
@@ -642,6 +747,8 @@ def schedule_create(
             cron=cron,
             history=history,
             strict_exit_codes=strict_exit_codes,
+            quiet=quiet_schedule,
+            no_color=no_color_schedule,
             path=schedules_file,
             overwrite=overwrite,
         )
@@ -655,31 +762,48 @@ def schedule_create(
 @schedule_app.command("list")
 def schedule_list(
     schedules_file: str | None = typer.Option(None, "--schedules-file"),
+    quiet: bool = typer.Option(False, "--quiet"),
+    no_color: bool = typer.Option(False, "--no-color"),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     names = list_schedule_names(schedules_file)
 
     if not names:
         warning("No schedules found.")
         return
 
+    if quiet:
+        return
+
     schedules = load_schedules(schedules_file)
 
     for name in names:
         schedule = schedules[name]
-        console.print(
-            f"- {name}: {schedule['cron']} -> "
-            f"dift profile run {schedule['profile']}"
+        command = build_profile_command(
+            profile=schedule["profile"],
+            history=bool(schedule.get("history", True)),
+            strict_exit_codes=bool(schedule.get("strict_exit_codes", True)),
+            quiet=bool(schedule.get("quiet", True)),
+            no_color=bool(schedule.get("no_color", True)),
         )
+        console.print(f"- {name}: {schedule['cron']} -> {command}")
 
 
 @schedule_app.command("show")
 def schedule_show(
     name: str = typer.Argument(..., help="Schedule name."),
     schedules_file: str | None = typer.Option(None, "--schedules-file"),
+    quiet: bool = typer.Option(False, "--quiet"),
+    no_color: bool = typer.Option(False, "--no-color"),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     try:
         schedule = get_schedule(name, schedules_file)
-        console.print_json(data=schedule)
+
+        if not quiet:
+            console.print_json(data=schedule)
 
     except Exception as exc:
         error(f"Error: {exc}")
@@ -690,7 +814,11 @@ def schedule_show(
 def schedule_delete(
     name: str = typer.Argument(..., help="Schedule name."),
     schedules_file: str | None = typer.Option(None, "--schedules-file"),
+    quiet: bool = typer.Option(False, "--quiet"),
+    no_color: bool = typer.Option(False, "--no-color"),
 ) -> None:
+    configure_output(quiet=quiet, no_color=no_color)
+
     try:
         delete_schedule(name, schedules_file)
         success(f"Deleted schedule '{name}'.")
@@ -704,6 +832,8 @@ def schedule_delete(
 def schedule_run(
     name: str = typer.Argument(..., help="Schedule name."),
     schedules_file: str | None = typer.Option(None, "--schedules-file"),
+    quiet: bool | None = typer.Option(None, "--quiet/--no-quiet"),
+    no_color: bool | None = typer.Option(None, "--no-color/--color"),
 ) -> None:
     try:
         schedule = get_schedule(name, schedules_file)
@@ -720,6 +850,8 @@ def schedule_run(
             save_history=bool(schedule.get("history", True)),
             history_dir=None,
             strict_exit_codes=bool(schedule.get("strict_exit_codes", True)),
+            quiet=bool(schedule.get("quiet", True)) if quiet is None else quiet,
+            no_color=bool(schedule.get("no_color", True)) if no_color is None else no_color,
         )
 
     except typer.Exit:
@@ -740,6 +872,8 @@ def schedule_cron(
         True,
         "--strict-exit-codes/--no-strict-exit-codes",
     ),
+    quiet: bool = typer.Option(True, "--quiet/--no-quiet"),
+    no_color: bool = typer.Option(True, "--no-color/--color"),
 ) -> None:
     if hour < 0 or hour > 23:
         error("Error: --hour must be between 0 and 23.")
@@ -753,6 +887,8 @@ def schedule_cron(
         profile=profile_name,
         history=history,
         strict_exit_codes=strict_exit_codes,
+        quiet=quiet,
+        no_color=no_color,
     )
     console.print(f"{minute} {hour} * * * {command}")
 
