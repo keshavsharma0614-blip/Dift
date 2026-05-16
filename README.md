@@ -528,27 +528,77 @@ Dift follows a strict priority chain to give you maximum flexibility:
 
 # Automation-Friendly Exit Codes
 
+Dift supports optional risk-based exit codes for automation workflows.
+
+By default, Dift exits with:
+
+```text
+0
+```
+
+when comparisons complete successfully.
+
+Enable strict automation behavior with:
+
 ```bash
 dift prod.csv candidate.csv \
   --key id \
   --strict-exit-codes
 ```
 
-| Exit Code | Meaning             |
-| --------- | ------------------- |
-| 0         | Low risk            |
-| 1         | Medium risk         |
-| 2         | High risk           |
-| 3         | Runtime/input error |
+---
 
-This will make Dift much more CI/CD friendly for:
+## Exit Code Mapping
+
+| Exit Code | Meaning |
+|---|---|
+| `0` | Low-risk comparison |
+| `1` | Medium-risk drift detected |
+| `2` | High-risk drift detected |
+| `3` | Runtime error, invalid input, or failed comparison |
+
+---
+
+This allows Dift to automatically fail pipelines when risky dataset changes are detected.
+
+Useful for:
 
 * GitHub Actions
+* GitLab CI
 * Jenkins
 * Airflow
 * cron jobs
-* deployment validation
-* ETL gates
+* ETL validation
+* deployment safety checks
+* scheduled data quality monitoring
+
+---
+
+## Example
+
+```bash
+dift prod.csv staging.csv \
+  --key customer_id \
+  --strict-exit-codes
+
+echo $?
+```
+
+Example output:
+
+```text
+2
+```
+
+This means Dift detected a high-risk dataset change.
+
+---
+
+## Backward Compatibility
+
+Strict exit codes are optional.
+
+Without `--strict-exit-codes`, Dift preserves the original behavior and exits successfully when comparisons complete.
 
 ---
 
