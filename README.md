@@ -52,6 +52,8 @@ Compare two datasets in seconds.
 * Parquet
 * Excel (`.xlsx`, `.xls`)
 * JSON
+* SQL Tables (`sqlite:///db.db::table_name`)
+* SQL Queries (`sqlite:///db.db::SELECT * FROM table`)
 
 ---
 
@@ -198,6 +200,17 @@ python -m dift.cli --help
 
 ```bash
 dift examples/old.csv examples/new.csv --key customer_id
+```
+### Compare SQL Tables
+
+```bash
+dift "sqlite:///old.db::customers" "sqlite:///new.db::customers"
+```
+
+### Compare SQL Queries
+
+```bash
+dift "sqlite:///old.db::SELECT * FROM customers" "sqlite:///new.db::SELECT * FROM customers"
 ```
 
 ---
@@ -347,8 +360,8 @@ ruff check .
 
 ## v0.6.0
 
-* SQL database support
-* Postgres connector
+* Expanded SQL connector support (Postgres/MySQL)
+* Advanced query comparison
 
 ---
 
