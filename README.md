@@ -779,6 +779,179 @@ Dift follows a strict priority chain to give you maximum flexibility:
 
 ---
 
+## Scheduled Comparisons
+
+Dift supports reusable scheduled comparison workflows for automation, monitoring, CI/CD pipelines, and recurring data quality checks.
+
+This makes it easy to:
+
+* run nightly drift checks
+* automate production dataset validation
+* integrate with cron jobs
+* schedule profile-based comparisons
+* build monitoring workflows
+
+---
+
+# Create a Reusable Profile
+
+First create a comparison profile:
+
+```bash
+dift profile create nightly-check \
+  --old examples/old.csv \
+  --new examples/new.csv \
+  --key customer_id \
+  --report html \
+  --output reports/nightly.html
+```
+
+This saves all comparison settings into a reusable profile.
+
+---
+
+# Generate a Cron Schedule
+
+Generate a cron-ready command:
+
+```bash
+dift schedule cron nightly-check
+```
+
+Example output:
+
+```cron
+0 2 * * * dift profile run nightly-check --history --strict-exit-codes
+```
+
+This means:
+
+* run every day
+* at 2:00 AM
+* save comparison history
+* use automation-friendly exit codes
+
+---
+
+# Custom Schedule Times
+
+Generate a custom cron schedule:
+
+```bash
+dift schedule cron nightly-check \
+  --hour 5 \
+  --minute 30
+```
+
+Output:
+
+```cron
+30 5 * * * dift profile run nightly-check --history --strict-exit-codes
+```
+
+Runs daily at 5:30 AM.
+
+---
+
+# Save Scheduled Jobs
+
+Create a named schedule:
+
+```bash
+dift schedule create daily-check \
+  --profile nightly-check \
+  --cron "0 2 * * *"
+```
+
+---
+
+# List Saved Schedules
+
+```bash
+dift schedule list
+```
+
+Example:
+
+```text
+- daily-check
+```
+
+---
+
+# Show Schedule Details
+
+```bash
+dift schedule show daily-check
+```
+
+Example output:
+
+```json
+{
+  "profile": "nightly-check",
+  "cron": "0 2 * * *"
+}
+```
+
+---
+
+# Run a Schedule Manually
+
+You can manually trigger a saved schedule:
+
+```bash
+dift schedule run daily-check
+```
+
+This runs the associated profile immediately.
+
+---
+
+# Delete a Schedule
+
+```bash
+dift schedule delete daily-check
+```
+
+---
+
+# Example Cron Integration (Linux/macOS)
+
+Open your crontab:
+
+```bash
+crontab -e
+```
+
+Add:
+
+```cron
+0 2 * * * dift profile run nightly-check --history --strict-exit-codes
+```
+
+---
+
+# Example Windows Task Scheduler
+
+Use the generated command:
+
+```bash
+dift profile run nightly-check --history --strict-exit-codes
+```
+
+inside:
+
+* Windows Task Scheduler
+* Jenkins
+* GitHub Actions
+* Airflow
+* Prefect
+* Dagster
+* CI/CD pipelines
+
+---
+
 # Automation-Friendly Exit Codes
 
 Dift supports optional risk-based exit codes for automation workflows.
@@ -1161,6 +1334,7 @@ dift/
 ├── profiles.py
 ├── batch.py
 ├── thresholds.py
+├── schedules.py
 ├── history.py
 └── utils/
 
@@ -1283,9 +1457,9 @@ mypy dift
 
 #### Scheduled Comparisons
 
-* Scheduled dataset checks
-* Cron-friendly execution
-* Time-based comparison workflows
+* [x] Scheduled dataset checks
+* [x] Cron-friendly execution
+* [x] Time-based comparison workflows
 
 #### CLI Automation Workflows
 
