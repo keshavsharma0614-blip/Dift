@@ -1,0 +1,14 @@
+key: customer_id
+report: html
+output: reports/env_report.html
+
+environments:
+  development:
+    old_dataset: examples/old.csv
+    new_dataset: examples/new.csv
+    threshold: 0.2
+
+  production:
+    old_dataset: ${OLD_DATASET}
+    new_dataset: ${NEW_DATASET}
+    threshold: 0.1
