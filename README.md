@@ -724,6 +724,32 @@ Categorical shift:
 
 ---
 
+# Automation-Friendly Exit Codes
+
+```bash
+dift prod.csv candidate.csv \
+  --key id \
+  --strict-exit-codes
+```
+
+| Exit Code | Meaning             |
+| --------- | ------------------- |
+| 0         | Low risk            |
+| 1         | Medium risk         |
+| 2         | High risk           |
+| 3         | Runtime/input error |
+
+This will make Dift much more CI/CD friendly for:
+
+* GitHub Actions
+* Jenkins
+* Airflow
+* cron jobs
+* deployment validation
+* ETL gates
+
+---
+
 # Example Files
 
 ```text
@@ -959,7 +985,7 @@ mypy dift
 #### CLI Automation Workflows
 
 * Non-interactive CLI support
-* Automation-friendly exit codes
+* [x] Automation-friendly exit codes
 * Pipeline integration support
 
 #### Batch Dataset Comparison
