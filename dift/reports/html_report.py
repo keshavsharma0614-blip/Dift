@@ -59,6 +59,7 @@ def _build_html(report: DiffReport, template: str) -> str:
     </header>
 
     {_summary_section(report)}
+    {_metadata_section(report)}
     {_schema_section(report)}
     {_row_section(report)}
     {_quality_section(report)}
@@ -85,6 +86,30 @@ def _summary_section(report: DiffReport) -> str:
         <tr><td>New columns</td><td>{report.summary.new_columns}</td></tr>
         <tr><td>Column delta</td><td>{report.summary.column_delta}</td></tr>
         <tr><td>Risk level</td><td>{_safe(report.summary.risk_level)}</td></tr>
+      </table>
+    </section>
+    """
+
+
+def _metadata_section(report: DiffReport) -> str:
+    metadata = report.metadata
+
+    return f"""
+    <section class="card">
+      <h2>Report Metadata</h2>
+      <table>
+        <tr><th>Metric</th><th>Value</th></tr>
+        <tr><td>Tool</td><td>{_safe(metadata.tool)}</td></tr>
+        <tr><td>Version</td><td>{_safe(metadata.version)}</td></tr>
+        <tr><td>Report type</td><td>{_safe(metadata.report_type)}</td></tr>
+        <tr><td>Generated at</td><td>{_safe(metadata.generated_at)}</td></tr>
+        <tr><td>Old source</td><td>{_safe(metadata.old_source)}</td></tr>
+        <tr><td>New source</td><td>{_safe(metadata.new_source)}</td></tr>
+        <tr><td>Key</td><td>{_safe(metadata.key)}</td></tr>
+        <tr><td>Threshold</td><td>{_safe(metadata.threshold)}</td></tr>
+        <tr><td>Report format</td><td>{_safe(metadata.report_format)}</td></tr>
+        <tr><td>Template</td><td>{_safe(metadata.template)}</td></tr>
+        <tr><td>Runtime seconds</td><td>{_safe(metadata.runtime_seconds)}</td></tr>
       </table>
     </section>
     """

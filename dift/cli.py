@@ -8,6 +8,9 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from datetime import UTC, datetime
+from time import perf_counter
+
 from dift.batch import find_dataset_pairs
 from dift.core.comparator import compare_datasets
 from dift.history import clear_history, load_history, save_history_record
@@ -151,12 +154,26 @@ def run_comparison(
             extension = extension_map[report]
             output = os.path.join(output_dir, f"dift_report.{extension}")
 
+    started_at = perf_counter()
+    generated_at = datetime.now(UTC).isoformat()
+
     diff_report = compare_datasets(
         old_dataset,
         new_dataset,
         key=key,
         threshold=threshold,
     )
+
+    runtime_seconds = round(perf_counter() - started_at, 4)
+
+    diff_report.metadata.generated_at = generated_at
+    diff_report.metadata.old_source = old_dataset
+    diff_report.metadata.new_source = new_dataset
+    diff_report.metadata.key = key
+    diff_report.metadata.threshold = threshold
+    diff_report.metadata.report_format = report.value
+    diff_report.metadata.template = template if report == ReportFormat.html else None
+    diff_report.metadata.runtime_seconds = runtime_seconds
 
     if save_history:
         history_path = save_history_record(

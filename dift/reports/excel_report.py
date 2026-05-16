@@ -36,6 +36,18 @@ def render_excel(report: DiffReport, output: str | None = None) -> Path:
 def _add_summary_sheet(ws, report: DiffReport) -> None:
     rows = [
         ["Metric", "Value"],
+        ["tool", report.metadata.tool],
+        ["version", report.metadata.version],
+        ["report_type", report.metadata.report_type],
+        ["generated_at", report.metadata.generated_at],
+        ["old_source", report.metadata.old_source],
+        ["new_source", report.metadata.new_source],
+        ["key", report.metadata.key],
+        ["threshold", report.metadata.threshold],
+        ["report_format", report.metadata.report_format],
+        ["template", report.metadata.template],
+        ["runtime_seconds", report.metadata.runtime_seconds],
+        [],
         ["old_rows", report.summary.old_rows],
         ["new_rows", report.summary.new_rows],
         ["row_delta", report.summary.row_delta],

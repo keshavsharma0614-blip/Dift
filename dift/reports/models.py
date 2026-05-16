@@ -8,6 +8,15 @@ class ReportMetadata(BaseModel):
     version: str = "0.5.0"
     report_type: str = "dataset_diff"
 
+    generated_at: str | None = None
+    old_source: str | None = None
+    new_source: str | None = None
+    key: str | None = None
+    threshold: float | None = None
+    report_format: str | None = None
+    template: str | None = None
+    runtime_seconds: float | None = None
+
 
 class Summary(BaseModel):
     old_rows: int
