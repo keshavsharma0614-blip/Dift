@@ -250,6 +250,155 @@ In this case, Dift uses:
 
 ---
 
+# Reusable Threshold Configurations
+
+Dift supports reusable threshold policies for advanced drift detection workflows.
+
+Threshold configurations help teams:
+
+* standardize drift sensitivity
+* customize validation rules
+* apply column-specific policies
+* reuse validation settings across environments
+
+---
+
+## Global Threshold Configuration
+
+```yaml
+thresholds:
+  numeric: 0.1
+  categorical: 0.2
+  outlier: 0.15
+```
+
+---
+
+## Column-Level Threshold Overrides
+
+```yaml
+thresholds:
+  numeric: 0.1
+  categorical: 0.2
+  outlier: 0.15
+
+  columns:
+    revenue:
+      numeric: 0.05
+      outlier: 0.1
+
+    segment:
+      categorical: 0.3
+```
+
+---
+
+## Full Threshold Config Example
+
+```yaml
+old_dataset: examples/old.csv
+new_dataset: examples/new.csv
+
+key: customer_id
+report: html
+output: reports/threshold_report.html
+
+thresholds:
+  numeric: 0.1
+  categorical: 0.2
+  outlier: 0.15
+
+  columns:
+    revenue:
+      numeric: 0.05
+      outlier: 0.1
+
+    status:
+      categorical: 0.3
+```
+
+---
+
+## Run Using Threshold Configs
+
+```bash
+dift --config examples/config_thresholds.yaml
+```
+
+---
+
+## CLI Threshold Override
+
+CLI thresholds still override global numeric thresholds for backward compatibility.
+
+```bash
+dift --config examples/config_thresholds.yaml --threshold 0.5
+```
+
+This overrides:
+
+```yaml
+thresholds:
+  numeric: 0.1
+```
+
+But preserves:
+
+* categorical thresholds
+* outlier thresholds
+* column-level overrides
+
+---
+
+## Supported Threshold Types
+
+| Threshold Type | Purpose                   |
+| -------------- | ------------------------- |
+| numeric        | Numeric drift detection   |
+| categorical    | Frequency shift detection |
+| outlier        | Outlier spike detection   |
+| columns        | Column-specific overrides |
+
+---
+
+## Example Use Cases
+
+### Sensitive Revenue Monitoring
+
+```yaml
+columns:
+  revenue:
+    numeric: 0.02
+```
+
+Detect even small revenue drift changes.
+
+---
+
+### Relaxed Categorical Drift
+
+```yaml
+columns:
+  segment:
+    categorical: 0.4
+```
+
+Reduce noise for highly variable categorical fields.
+
+---
+
+### Strict Outlier Detection
+
+```yaml
+columns:
+  transactions:
+    outlier: 0.05
+```
+
+Catch abnormal spikes aggressively.
+
+---
+
 # Saved Comparison Profiles
 
 Dift supports reusable saved comparison profiles.
@@ -816,6 +965,7 @@ examples/
 ├── config_sample.yaml
 ├── config_sample.toml
 ├── config_sample.json
+├── config_thresholds.yaml
 ├── config_with_datasets.yaml
 ├── config_with_datasets.toml
 └── config_with_datasets.json
@@ -905,6 +1055,7 @@ dift/
 │   └── models.py
 ├── profiles.py
 ├── batch.py
+├── thresholds.py
 ├── history.py
 └── utils/
 
@@ -1011,10 +1162,10 @@ mypy dift
 
 #### Reusable Threshold Configs
 
-* Numeric drift thresholds
-* Categorical shift thresholds
-* Outlier thresholds
-* Column-level threshold overrides
+* [x] Numeric drift thresholds
+* [x] Categorical shift thresholds
+* [x] Outlier thresholds
+* [x] Column-level threshold overrides
 
 #### Environment-Based Configs
 
@@ -1067,10 +1218,10 @@ mypy dift
 
 #### Report Metadata Expansion
 
-* Execution timestamps
-* Runtime metrics
-* Dataset source metadata
-* Threshold metadata
+* [x] Execution timestamps
+* [x] Runtime metrics
+* [x] Dataset source metadata
+* [x] Threshold metadata
 
 
 
