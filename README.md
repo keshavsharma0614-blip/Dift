@@ -213,6 +213,46 @@ output_dir = "reports/"
   "output_dir": "reports/"
 }
 ```
+---
+
+## Dataset Paths in Config Files
+
+Dift can also load dataset paths directly from config files.
+
+This means you can run a comparison without typing the old and new dataset paths in the terminal every time.
+
+```bash
+dift --config examples/config_with_datasets.yaml
+```
+
+### YAML Example
+
+```yaml
+old_dataset: examples/old.csv
+new_dataset: examples/new.csv
+key: customer_id
+threshold: 0.2
+report: html
+output: reports/config_report.html
+```
+
+### CLI Override Example
+
+CLI arguments still override config values.
+
+```bash
+dift examples/old_drift.csv examples/new_drift.csv \
+  --config examples/config_with_datasets.yaml \
+  --report json \
+  --output override_report.json
+```
+
+In this case, Dift uses:
+
+* datasets from the CLI
+* report/output from the CLI
+* remaining values from the config file
+
 
 ---
 
@@ -706,7 +746,10 @@ examples/
 ├── new_drift.csv
 ├── config_sample.yaml
 ├── config_sample.toml
-└── config_sample.json
+├── config_sample.json
+├── config_with_datasets.yaml
+├── config_with_datasets.toml
+└── config_with_datasets.json
 ```
 
 ---
