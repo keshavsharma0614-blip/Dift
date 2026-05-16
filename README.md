@@ -399,6 +399,110 @@ Catch abnormal spikes aggressively.
 
 ---
 
+# Environment-Based Configurations
+
+Dift supports reusable environment-specific configurations for development, staging, and production workflows.
+
+This helps teams maintain different comparison settings across environments while keeping configs clean and reusable.
+
+---
+
+## Select an Environment
+
+```bash
+dift --config examples/config_env.yaml --env development
+```
+
+---
+
+## Example Environment Config
+
+### YAML
+
+```yaml
+key: customer_id
+report: html
+output: reports/env_report.html
+
+environments:
+  development:
+    old_dataset: examples/old.csv
+    new_dataset: examples/new.csv
+    threshold: 0.2
+
+  staging:
+    old_dataset: staging_old.csv
+    new_dataset: staging_new.csv
+    threshold: 0.15
+
+  production:
+    old_dataset: ${OLD_DATASET}
+    new_dataset: ${NEW_DATASET}
+    threshold: 0.1
+```
+
+---
+
+## Environment Variable Support
+
+Dift supports environment variable interpolation inside config files.
+
+Example:
+
+```yaml
+old_dataset: ${OLD_DATASET}
+new_dataset: ${NEW_DATASET}
+```
+
+Set variables before running Dift.
+
+### Git Bash / Linux / Mac
+
+```bash
+export OLD_DATASET=examples/old.csv
+export NEW_DATASET=examples/new.csv
+```
+
+### PowerShell
+
+```powershell
+$env:OLD_DATASET="examples/old.csv"
+$env:NEW_DATASET="examples/new.csv"
+```
+
+Then run:
+
+```bash
+dift --config examples/config_env.yaml --env production
+```
+
+---
+
+## Missing Environment Variables
+
+If a required environment variable is missing, Dift shows a helpful error.
+
+Example:
+
+```text
+Error: Missing environment variable 'OLD_DATASET'
+```
+
+---
+
+## Environment Workflow Benefits
+
+Environment configs help support:
+
+* development workflows
+* staging validation
+* production deployment checks
+* CI/CD pipelines
+* secret management preparation
+* reusable automation workflows
+
+---
+
 # Saved Comparison Profiles
 
 Dift supports reusable saved comparison profiles.
@@ -966,6 +1070,7 @@ examples/
 ├── config_sample.toml
 ├── config_sample.json
 ├── config_thresholds.yaml
+├── config_env.yaml
 ├── config_with_datasets.yaml
 ├── config_with_datasets.toml
 └── config_with_datasets.json
@@ -1169,9 +1274,9 @@ mypy dift
 
 #### Environment-Based Configs
 
-* Development/staging/production configs
-* Environment variable support
-* Secret management support
+* [x] Development/staging/production configs
+* [x] Environment variable support
+* [x] Secret management preparation
 
 
 ### Automation Features
