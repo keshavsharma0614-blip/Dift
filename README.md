@@ -526,6 +526,32 @@ Dift follows a strict priority chain to give you maximum flexibility:
 
 ---
 
+# Automation-Friendly Exit Codes
+
+```bash
+dift prod.csv candidate.csv \
+  --key id \
+  --strict-exit-codes
+```
+
+| Exit Code | Meaning             |
+| --------- | ------------------- |
+| 0         | Low risk            |
+| 1         | Medium risk         |
+| 2         | High risk           |
+| 3         | Runtime/input error |
+
+This will make Dift much more CI/CD friendly for:
+
+* GitHub Actions
+* Jenkins
+* Airflow
+* cron jobs
+* deployment validation
+* ETL gates
+
+---
+
 ## Requirements
 
 * Python 3.10+
@@ -721,33 +747,6 @@ Categorical shift:
 'segment' max frequency shift 60.00%
 (high)
 ```
-
----
-
-# Automation-Friendly Exit Codes
-
-```bash
-dift prod.csv candidate.csv \
-  --key id \
-  --strict-exit-codes
-```
-
-| Exit Code | Meaning             |
-| --------- | ------------------- |
-| 0         | Low risk            |
-| 1         | Medium risk         |
-| 2         | High risk           |
-| 3         | Runtime/input error |
-
-This will make Dift much more CI/CD friendly for:
-
-* GitHub Actions
-* Jenkins
-* Airflow
-* cron jobs
-* deployment validation
-* ETL gates
-
 ---
 
 # Example Files
