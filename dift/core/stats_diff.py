@@ -8,6 +8,7 @@ from dift.reports.models import (
     OutlierDiff,
     StatsDiff,
 )
+from dift.thresholds import ThresholdConfig
 
 NUMERIC_DTYPES = {
     pl.Int8,
@@ -31,6 +32,7 @@ def compare_stats(
     top_n: int = 10,
     threshold: float = 0.1,
     key: str | None = None,
+    threshold_config: ThresholdConfig | None = None,
 ) -> StatsDiff:
     """Compare numeric summary stats, categorical top values, and outliers."""
     shared_cols = sorted(set(old.columns) & set(new.columns))
@@ -44,6 +46,22 @@ def compare_stats(
 
         old_dtype = old.schema[column]
         new_dtype = new.schema[column]
+
+        numeric_threshold = (
+            threshold_config.numeric_for(column)
+            if threshold_config
+            else threshold
+        )
+        categorical_threshold = (
+            threshold_config.categorical_for(column)
+            if threshold_config
+            else threshold
+        )
+        outlier_threshold = (
+            threshold_config.outlier_for(column)
+            if threshold_config
+            else threshold
+        )
 
         if old_dtype in NUMERIC_DTYPES and new_dtype in NUMERIC_DTYPES:
             old_series = old[column]
@@ -66,7 +84,7 @@ def compare_stats(
             range_shift_pct = _relative_change(n_range, o_range)
 
             is_drifted = any(
-                shift is not None and shift >= threshold
+                shift is not None and shift >= numeric_threshold
                 for shift in [mean_shift_pct, std_shift_pct, range_shift_pct]
             )
 
@@ -74,7 +92,7 @@ def compare_stats(
                 mean_shift_pct=mean_shift_pct,
                 std_shift_pct=std_shift_pct,
                 range_shift_pct=range_shift_pct,
-                threshold=threshold,
+                threshold=numeric_threshold,
             )
 
             numeric_diffs.append(
@@ -95,7 +113,7 @@ def compare_stats(
                     std_shift_pct=std_shift_pct,
                     range_shift_pct=range_shift_pct,
                     is_drifted=is_drifted,
-                    drift_threshold=threshold,
+                    drift_threshold=numeric_threshold,
                     severity=severity,
                 )
             )
@@ -105,6 +123,7 @@ def compare_stats(
                     column=column,
                     old_series=old_series,
                     new_series=new_series,
+                    threshold=outlier_threshold,
                 )
             )
 
@@ -124,7 +143,7 @@ def compare_stats(
                     4,
                 )
 
-                if abs(shift) >= threshold:
+                if abs(shift) >= categorical_threshold:
                     frequency_shifts[str(value)] = shift
 
             max_frequency_shift = (
@@ -136,7 +155,10 @@ def compare_stats(
             values_added = sorted(map(str, new_values - old_values))
             values_removed = sorted(map(str, old_values - new_values))
             is_shifted = bool(values_added or values_removed or frequency_shifts)
-            severity = _classify_categorical_shift(max_frequency_shift, threshold)
+            severity = _classify_categorical_shift(
+                max_frequency_shift,
+                categorical_threshold,
+            )
 
             categorical_diffs.append(
                 CategoricalDiff(
@@ -163,6 +185,7 @@ def _compare_outliers(
     column: str,
     old_series: pl.Series,
     new_series: pl.Series,
+    threshold: float,
 ) -> OutlierDiff:
     method = "iqr"
 
@@ -198,7 +221,10 @@ def _compare_outliers(
     delta_outlier_pct = round(new_outlier_pct - old_outlier_pct, 4)
 
     delta_outliers = new_outliers - old_outliers
-    is_spike, severity = _classify_outlier_spike(delta_outlier_pct)
+    is_spike, severity = _classify_outlier_spike(
+        delta_outlier_pct=delta_outlier_pct,
+        threshold=threshold,
+    )
 
     return OutlierDiff(
         column=column,
@@ -224,12 +250,20 @@ def _count_outliers(
     return values.filter((values < lower_bound) | (values > upper_bound)).len()
 
 
-def _classify_outlier_spike(delta_outlier_pct: float) -> tuple[bool, str]:
-    if delta_outlier_pct >= 15:
+def _classify_outlier_spike(
+    delta_outlier_pct: float,
+    threshold: float,
+) -> tuple[bool, str]:
+    threshold_pct = threshold * 100
+
+    if delta_outlier_pct >= threshold_pct * 5:
         return True, "high"
 
-    if delta_outlier_pct >= 5:
+    if delta_outlier_pct >= threshold_pct * 2:
         return True, "medium"
+
+    if delta_outlier_pct >= threshold_pct:
+        return True, "low"
 
     return False, "low"
 

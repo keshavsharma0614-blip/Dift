@@ -7,17 +7,19 @@ from dift.core.schema_diff import compare_schema
 from dift.core.stats_diff import compare_stats
 from dift.io.readers import read_dataset
 from dift.reports.models import DiffReport, Summary
+from dift.thresholds import ThresholdConfig
 
 
 def compare_datasets(
-    old_path: str,
-    new_path: str,
+    old_dataset: str,
+    new_dataset: str,
     key: str | None = None,
     threshold: float = 0.1,
+    threshold_config: ThresholdConfig | None = None,
 ) -> DiffReport:
-    """Run the full MVP dataset comparison."""
-    old = read_dataset(old_path)
-    new = read_dataset(new_path)
+    """Run the full dataset comparison."""
+    old = read_dataset(old_dataset)
+    new = read_dataset(new_dataset)
 
     schema_diff = compare_schema(old, new)
     row_diff = compare_rows(old, new, key=key)
@@ -27,6 +29,7 @@ def compare_datasets(
         new,
         threshold=threshold,
         key=key,
+        threshold_config=threshold_config,
     )
 
     report = DiffReport(
